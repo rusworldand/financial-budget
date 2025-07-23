@@ -81,7 +81,7 @@ pub struct Slip {
     doc_id: Option<usize>,          // Номер документа
 }
 
-pub struct Element {
+pub struct Receipt {
     date_time: NaiveDateTime,          //Дата время
     calculation_type: CalculationType, //Признак рассчёта - тип чека
     address: Option<String>,           // Адрес
