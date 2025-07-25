@@ -1,13 +1,17 @@
 use chrono::NaiveDateTime;
+use serde::{Deserialize, Serialize};
 
 //Признак рассчёта - тип чека
+#[derive(Default, Serialize, Deserialize)]
 enum CalculationType {
-    Inbound,        // Чек прихода
+    #[default]
+    Inbound, // Чек прихода
     Outbound,       // Чек расхода
     InboundReturn,  // Возврат прихода
     OutboundReturn, // Возврат расхода
 }
 
+#[derive(Serialize, Deserialize)]
 enum VatType {
     Vat20,
     Vat10,
@@ -16,6 +20,7 @@ enum VatType {
     Vat0,
 }
 
+#[derive(Serialize, Deserialize)]
 enum UnitType {
     Pieces,
     Gramm,
@@ -44,18 +49,21 @@ enum UnitType {
     // Терабайт
 }
 
+#[derive(Serialize, Deserialize)]
 enum CashlessOpType {
     Payment,
     Cansel,
     Return,
 }
 
-enum Valut {
+#[derive(Serialize, Deserialize)]
+enum Currency {
     Rub,
     Usd,
 }
 // Предмет рассчёта
 
+#[derive(Serialize, Deserialize)]
 pub struct Subject {
     name: String,        // Найменование
     unit_type: UnitType, // Тип количества
@@ -66,12 +74,13 @@ pub struct Subject {
     vat: usize,          // НДС
 }
 
+#[derive(Serialize, Deserialize)]
 pub struct Slip {
     id: usize,                      //Номер терминала
     op_type: CashlessOpType,        // Тип операции
     date_time: NaiveDateTime,       // Дата - время
     summary: usize,                 // Сумма
-    valut: Valut,                   // Валюта
+    currency: Currency,             // Валюта
     comm_summary: Option<usize>,    // Сумма комиссионного вознаграждения
     auth_code: String,              // Код авторизации
     card: String,                   // Номер карты
@@ -81,19 +90,43 @@ pub struct Slip {
     doc_id: Option<usize>,          // Номер документа
 }
 
+#[derive(Default, Serialize, Deserialize)]
 pub struct Receipt {
-    date_time: NaiveDateTime,          //Дата время
-    calculation_type: CalculationType, //Признак рассчёта - тип чека
-    address: Option<String>,           // Адрес
-    place: Option<String>,             // Место - Название учреждения
-    subjects: Vec<Subject>,            // Предмет рассчёта - позиции в документе
-    summary: usize,                    // Сумма
-    cash: Option<usize>,               // Нал
-    cashless: Option<usize>,           // Безнал
-    prepayment: Option<usize>,         // Аванс
-    postpayment: Option<usize>,        // Кредит
-    in_kind: Option<usize>,            // За счёт з/п
-    vat: Option<usize>,                // Сумма НДС
-    url: Option<String>,               // Ссылка на чек
-    slip: Option<Slip>,                // Слип-чек
+    /// Дата время
+    date_time: NaiveDateTime,
+    /// Признак рассчёта - тип чека
+    calculation_type: CalculationType,
+    /// Адрес
+    address: Option<String>,
+    /// Место - Название учреждения
+    place: Option<String>,
+    /// Предмет рассчёта - позиции в документе
+    subjects: Vec<Subject>,
+    /// Сумма
+    summary: usize,
+    /// Нал
+    cash: Option<usize>,
+    /// Безнал
+    cashless: Option<usize>,
+    /// Аванс
+    prepayment: Option<usize>,
+    /// Кредит
+    postpayment: Option<usize>,
+    /// За счёт з/п
+    in_kind: Option<usize>,
+    /// Сумма НДС
+    vat: Option<usize>,
+    /// Ссылка на чек
+    url: Option<String>,
+    /// Слип-чек
+    slip: Option<Slip>,
+}
+
+impl Receipt {
+    fn new(summary: usize) -> Self {
+        Self {
+            summary,
+            ..Default::default()
+        }
+    }
 }

@@ -1,22 +1,29 @@
 use chrono::NaiveDateTime;
+use serde::{Deserialize, Serialize};
 
+use crate::receipt;
+
+#[derive(Serialize, Deserialize)]
 enum OperationType {
+    Initial,
     Buy,
     Sell,
-    CreditingAccounts,      //Зачисление на счёт
+    DebetingAccounts,       //Зачисление на счёт
     WithdrawalFromAccounts, // Списание со счёта
     ClosingAccounts,        // Закрытие счёта
 }
 
+#[derive(Serialize, Deserialize)]
 enum Direction {
     Debet,
     Credit,
 }
 
-pub struct operation {
+#[derive(Serialize, Deserialize)]
+pub struct Operation {
     date_time: NaiveDateTime,
     operation_type: OperationType,
     summary: usize,
     direction: Direction,
-    // conduction: bool,
+    receipt: Option<receipt::Receipt>, // conduction: bool,
 }
