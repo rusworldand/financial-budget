@@ -17,5 +17,19 @@ pub struct Account {
     name: String,
     account_type: AccountType,
     number: usize,
-    bank_bik: u32,
+    bik: u32,
+    sum: usize,
+}
+
+impl Account {
+    fn new(name: String, account_type: AccountType, number: usize, bik: u32) -> Self {
+        Self {
+            id: Uuid::new_v4(),
+            name: name,
+            account_type: account_type,
+            number: number,
+            bik: bik,
+            sum: 0,
+        }
+    }
 }

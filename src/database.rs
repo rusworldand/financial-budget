@@ -6,6 +6,8 @@ use std::path::Path;
 use crate::Account;
 use crate::operation::Operation;
 
+const db_version: &str = "0.0.1";
+
 #[derive(Serialize, Deserialize)]
 struct Operations {
     account: Account,
