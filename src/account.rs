@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 #[derive(Serialize, Deserialize)]
-enum AccountType {
+pub enum AccountType {
     Account,
     DebetCard,
     CreditCard,
@@ -22,7 +22,7 @@ pub struct Account {
 }
 
 impl Account {
-    fn new(name: String, account_type: AccountType, number: usize, bik: u32) -> Self {
+    pub fn new(name: String, account_type: AccountType, number: usize, bik: u32) -> Self {
         Self {
             id: Uuid::new_v4(),
             name: name,

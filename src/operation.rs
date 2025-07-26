@@ -49,7 +49,7 @@ impl Operation {
     //         receipt,
     //     }
     // }
-    fn new(
+    pub fn new(
         date_time: NaiveDateTime,
         operation_type: OperationType,
         summary: usize,
