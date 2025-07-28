@@ -123,7 +123,7 @@ pub struct Receipt {
 }
 
 impl Receipt {
-    pub fn new(summary: usize) -> Self {
+    pub fn short_new(summary: usize) -> Self {
         Self {
             summary,
             ..Default::default()

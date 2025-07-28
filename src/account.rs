@@ -4,6 +4,7 @@ use uuid::Uuid;
 #[derive(Serialize, Deserialize)]
 pub enum AccountType {
     Account,
+    Cash,
     DebetCard,
     CreditCard,
     CreditAccount,
@@ -13,16 +14,16 @@ pub enum AccountType {
 
 #[derive(Serialize, Deserialize)]
 pub struct Account {
-    id: Uuid,
+    pub id: Uuid,
     name: String,
     account_type: AccountType,
-    number: usize,
+    number: String,
     bik: u32,
     sum: usize,
 }
 
 impl Account {
-    pub fn new(name: String, account_type: AccountType, number: usize, bik: u32) -> Self {
+    pub fn new(name: String, account_type: AccountType, number: String, bik: u32) -> Self {
         Self {
             id: Uuid::new_v4(),
             name: name,

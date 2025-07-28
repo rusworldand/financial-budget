@@ -1,3 +1,4 @@
+use chrono::Local;
 use chrono::NaiveDate;
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
@@ -6,7 +7,7 @@ use crate::account;
 use crate::receipt;
 
 #[derive(Serialize, Deserialize)]
-enum OperationType {
+pub enum OperationType {
     Initial,
     Buy,
     Sell,
@@ -16,7 +17,7 @@ enum OperationType {
 }
 
 #[derive(Serialize, Deserialize)]
-enum Direction {
+pub enum Direction {
     Debet,  //+
     Credit, //-
 }
@@ -31,33 +32,18 @@ pub struct Operation {
 }
 
 impl Operation {
-    // fn new(
-    //     date_time: Option<NaiveDateTime>,
-    //     operation_type: OperationType,
-    //     summary: usize,
-    //     direction: Direction,
-    //     receipt: Option<receipt::Receipt>,
-    // ) -> Self {
-    //     Self {
-    //         date_time: match date_time {
-    //             Some(_) => date_time.expect("Empty"),
-    //             None => NaiveDateTime::new(NaiveDate::, time),
-    //         },
-    //         operation_type,
-    //         summary,
-    //         direction,
-    //         receipt,
-    //     }
-    // }
     pub fn new(
-        date_time: NaiveDateTime,
+        date_time: Option<NaiveDateTime>,
         operation_type: OperationType,
         summary: usize,
         direction: Direction,
         receipt: Option<receipt::Receipt>,
     ) -> Self {
         Self {
-            date_time: date_time,
+            date_time: match date_time {
+                Some(_) => date_time.expect("Empty"),
+                None => Local::now().naive_local(),
+            },
             operation_type: operation_type,
             summary: summary,
             direction: direction,
@@ -65,3 +51,19 @@ impl Operation {
         }
     }
 }
+
+// pub fn new(
+//     date_time: NaiveDateTime,
+//     operation_type: OperationType,
+//     summary: usize,
+//     direction: Direction,
+//     receipt: Option<receipt::Receipt>,
+// ) -> Self {
+//     Self {
+//         date_time: date_time,
+//         operation_type: operation_type,
+//         summary: summary,
+//         direction: direction,
+//         receipt: receipt,
+//     }
+// }
