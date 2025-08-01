@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{account::Account, database::Database, database::Operations, operation::Operation};
 
-use eframe::egui;
+use eframe::egui::{self, Response, response};
 
 mod account;
 mod database;
@@ -89,7 +89,8 @@ impl eframe::App for App {
                             .column(Column::auto())
                             .column(Column::auto())
                             .min_scrolled_height(0.0)
-                            .max_scroll_height(80.0);
+                            .max_scroll_height(80.0)
+                            .sense(egui::Sense::click());
 
                         table
                             .header(30.0, |mut header| {
@@ -103,12 +104,39 @@ impl eframe::App for App {
                             .body(|mut body| {
                                 for i in &self.db.accounts {
                                     body.row(30.0, |mut row| {
+                                        let mut response: Option<Response> = None;
                                         row.col(|ui| {
-                                            ui.label(format!("ID '{}'", i.id));
+                                            let variable = ui.label(format!("ID '{}'", i.id));
+                                            if let Some(response) = &mut response {
+                                                *response = response.union(variable)
+                                            } else {
+                                                response = Some(variable)
+                                            }
                                         });
+
                                         row.col(|ui| {
-                                            ui.label(format!("Name '{}'", i.name));
+                                            let variable = ui.label(format!("Name '{}'", i.name));
+                                            if let Some(response) = &mut response {
+                                                *response = response.union(variable)
+                                            } else {
+                                                response = Some(variable)
+                                            }
                                         });
+                                        let row_response = row.response();
+
+                                        if let Some(response) = &mut response {
+                                            *response = response.union(row_response)
+                                        } else {
+                                            response = Some(row_response)
+                                        }
+                                        if let Some(response) = response {
+                                            if response.double_clicked() {
+                                                println!("Double!")
+                                            }
+                                            if response.triple_clicked() {
+                                                println!("Triple!")
+                                            }
+                                        };
                                     });
                                 }
                             });
