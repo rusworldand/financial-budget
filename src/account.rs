@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub enum AccountType {
     Account,
     Cash,
@@ -12,14 +12,14 @@ pub enum AccountType {
     Deposit,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Account {
     pub id: Uuid,
-    name: String,
-    account_type: AccountType,
-    number: String,
-    bik: u32,
-    sum: usize,
+    pub name: String,
+    pub account_type: AccountType,
+    pub number: String,
+    pub bik: u32,
+    pub sum: usize,
 }
 
 impl Account {

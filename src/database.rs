@@ -8,9 +8,9 @@ use crate::account::*;
 use crate::operation::Operation;
 
 #[derive(Serialize, Deserialize)]
-struct Operations {
-    account: Uuid,
-    operation: Operation,
+pub struct Operations {
+    pub account: Uuid,
+    pub operation: Operation,
 }
 
 impl Operations {

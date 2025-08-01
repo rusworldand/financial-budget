@@ -2,7 +2,7 @@ use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 
 //Признак рассчёта - тип чека
-#[derive(Default, Serialize, Deserialize)]
+#[derive(Default, Serialize, Deserialize, Debug)]
 enum CalculationType {
     #[default]
     Inbound, // Чек прихода
@@ -11,7 +11,7 @@ enum CalculationType {
     OutboundReturn, // Возврат расхода
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 enum VatType {
     Vat20,
     Vat10,
@@ -20,7 +20,7 @@ enum VatType {
     Vat0,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 enum UnitType {
     Pieces,
     Gramm,
@@ -49,21 +49,21 @@ enum UnitType {
     // Терабайт
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 enum CashlessOpType {
     Payment,
     Cansel,
     Return,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 enum Currency {
     Rub,
     Usd,
 }
 // Предмет рассчёта
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Subject {
     name: String,        // Найменование
     unit_type: UnitType, // Тип количества
@@ -74,7 +74,7 @@ pub struct Subject {
     vat: usize,          // НДС
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Slip {
     id: usize,                      //Номер терминала
     op_type: CashlessOpType,        // Тип операции
@@ -90,7 +90,7 @@ pub struct Slip {
     doc_id: Option<usize>,          // Номер документа
 }
 
-#[derive(Default, Serialize, Deserialize)]
+#[derive(Default, Serialize, Deserialize, Debug)]
 pub struct Receipt {
     /// Дата время
     date_time: NaiveDateTime,

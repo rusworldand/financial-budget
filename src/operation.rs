@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use crate::account;
 use crate::receipt;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub enum OperationType {
     Initial,
     Buy,
@@ -16,19 +16,19 @@ pub enum OperationType {
     ClosingAccounts,        // Закрытие счёта
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub enum Direction {
     Debet,  //+
     Credit, //-
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Operation {
-    date_time: NaiveDateTime,
-    operation_type: OperationType,
-    summary: usize,
-    direction: Direction,
-    receipt: Option<receipt::Receipt>, // conduction: bool,
+    pub date_time: NaiveDateTime,
+    pub operation_type: OperationType,
+    pub summary: usize,
+    pub direction: Direction,
+    pub receipt: Option<receipt::Receipt>, // conduction: bool,
 }
 
 impl Operation {
