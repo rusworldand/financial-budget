@@ -85,6 +85,7 @@ impl eframe::App for App {
                         let mut table = TableBuilder::new(ui)
                             .resizable(true)
                             .striped(true)
+                            .id_salt("account_table")
                             .cell_layout(egui::Layout::left_to_right(egui::Align::Center))
                             .column(Column::auto())
                             .column(Column::auto())
@@ -105,23 +106,19 @@ impl eframe::App for App {
                                 for i in &self.db.accounts {
                                     body.row(30.0, |mut row| {
                                         let mut response: Option<Response> = None;
-                                        row.col(|ui| {
-                                            let variable = ui.label(format!("ID '{}'", i.id));
-                                            if let Some(response) = &mut response {
-                                                *response = response.union(variable)
-                                            } else {
-                                                response = Some(variable)
-                                            }
-                                        });
+                                        let mut contents =
+                                            |ui: &mut eframe::egui::Ui, text: String| {
+                                                let variable = ui.label(text);
+                                                if let Some(response) = &mut response {
+                                                    *response = response.union(variable)
+                                                } else {
+                                                    response = Some(variable)
+                                                }
+                                            };
+                                        row.col(|ui| contents(ui, format!("ID '{}'", i.id)));
 
-                                        row.col(|ui| {
-                                            let variable = ui.label(format!("Name '{}'", i.name));
-                                            if let Some(response) = &mut response {
-                                                *response = response.union(variable)
-                                            } else {
-                                                response = Some(variable)
-                                            }
-                                        });
+                                        row.col(|ui| contents(ui, format!("Name '{}'", i.name)));
+
                                         let row_response = row.response();
 
                                         if let Some(response) = &mut response {
@@ -143,8 +140,74 @@ impl eframe::App for App {
                     });
                 });
 
+            //ui.push_id(id_salt, add_contents)
+
             ui.separator();
             ui.label(format!("Operations"));
+
+            StripBuilder::new(ui)
+                .size(Size::exact(100.0)) // for the table
+                .vertical(|mut strip| {
+                    strip.cell(|ui| {
+                        let mut table = TableBuilder::new(ui)
+                            .resizable(true)
+                            .striped(true)
+                            .id_salt("operations_table")
+                            .cell_layout(egui::Layout::left_to_right(egui::Align::Center))
+                            .column(Column::auto())
+                            .column(Column::auto())
+                            .min_scrolled_height(0.0)
+                            .max_scroll_height(80.0)
+                            .sense(egui::Sense::click());
+
+                        table
+                            .header(30.0, |mut header| {
+                                header.col(|ui| {
+                                    ui.strong("ID");
+                                    ui.push_id(id_salt, add_contents)
+                                });
+                                header.col(|ui| {
+                                    ui.strong("Name");
+                                });
+                            })
+                            .body(|mut body| {
+                                for i in &self.db.accounts {
+                                    body.row(30.0, |mut row| {
+                                        let mut response: Option<Response> = None;
+                                        let mut contents =
+                                            |ui: &mut eframe::egui::Ui, text: String| {
+                                                let variable = ui.label(text);
+                                                if let Some(response) = &mut response {
+                                                    *response = response.union(variable)
+                                                } else {
+                                                    response = Some(variable)
+                                                }
+                                            };
+                                        row.col(|ui| contents(ui, format!("ID '{}'", i.id)));
+
+                                        row.col(|ui| contents(ui, format!("Name '{}'", i.name)));
+
+                                        let row_response = row.response();
+
+                                        if let Some(response) = &mut response {
+                                            *response = response.union(row_response)
+                                        } else {
+                                            response = Some(row_response)
+                                        }
+                                        if let Some(response) = response {
+                                            if response.double_clicked() {
+                                                println!("Double!")
+                                            }
+                                            if response.triple_clicked() {
+                                                println!("Triple!")
+                                            }
+                                        };
+                                    });
+                                }
+                            });
+                    });
+                });
+            //
         });
     }
 }
