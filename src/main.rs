@@ -164,7 +164,7 @@ impl eframe::App for App {
                             .header(30.0, |mut header| {
                                 header.col(|ui| {
                                     ui.strong("ID");
-                                    ui.push_id(id_salt, add_contents)
+                                    // ui.push_id(id_salt, add_contents)
                                 });
                                 header.col(|ui| {
                                     ui.strong("Name");
