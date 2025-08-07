@@ -56,28 +56,8 @@ impl eframe::App for App {
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.heading("My egui Application");
 
-            //ui.label(format!("Hello '{}', age {}", self.name, self.age));
             ui.label(format!("Accounts"));
 
-            // for i in &self.db.accounts {
-            //     ui.label(format!(
-            //         "ID '{}', name {}, type {:?}, number {}, bik {}, sum {}",
-            //         i.id, i.name, i.account_type, i.number, i.bik, i.sum
-            //     ));
-            // }
-            // ui.label(format!("Operations"));
-            // for Operations { account, operation } in &self.db.operations {
-            //     ui.label(format!(
-            //         "ID '{}', date time {}, type {:?}, summary {}, direction {:?}, receipt {:#?}",
-            //         account,
-            //         operation.date_time,
-            //         operation.operation_type,
-            //         operation.summary,
-            //         operation.direction,
-            //         operation.receipt
-            //     ));
-            // }
-            //
             StripBuilder::new(ui)
                 .size(Size::exact(100.0)) // for the table
                 .vertical(|mut strip| {
@@ -85,7 +65,7 @@ impl eframe::App for App {
                         let mut table = TableBuilder::new(ui)
                             .resizable(true)
                             .striped(true)
-                            .id_salt("account_table")
+                            .id_salt("operations_table")
                             .cell_layout(egui::Layout::left_to_right(egui::Align::Center))
                             .column(Column::auto())
                             .column(Column::auto())
@@ -97,6 +77,7 @@ impl eframe::App for App {
                             .header(30.0, |mut header| {
                                 header.col(|ui| {
                                     ui.strong("ID");
+                                    // ui.push_id(id_salt, add_contents)
                                 });
                                 header.col(|ui| {
                                     ui.strong("Name");
@@ -146,32 +127,35 @@ impl eframe::App for App {
             ui.label(format!("Operations"));
 
             StripBuilder::new(ui)
-                .size(Size::exact(100.0)) // for the table
+                .size(Size::exact(200.0)) // for the table
                 .vertical(|mut strip| {
                     strip.cell(|ui| {
                         let mut table = TableBuilder::new(ui)
                             .resizable(true)
                             .striped(true)
-                            .id_salt("operations_table")
+                            .id_salt("account_table")
                             .cell_layout(egui::Layout::left_to_right(egui::Align::Center))
                             .column(Column::auto())
                             .column(Column::auto())
+                            .column(Column::auto())
                             .min_scrolled_height(0.0)
-                            .max_scroll_height(80.0)
+                            .max_scroll_height(100.0)
                             .sense(egui::Sense::click());
 
                         table
                             .header(30.0, |mut header| {
                                 header.col(|ui| {
-                                    ui.strong("ID");
-                                    // ui.push_id(id_salt, add_contents)
+                                    ui.strong("Account");
                                 });
                                 header.col(|ui| {
-                                    ui.strong("Name");
+                                    ui.strong("Date / Time");
+                                });
+                                header.col(|ui| {
+                                    ui.strong("Sum");
                                 });
                             })
                             .body(|mut body| {
-                                for i in &self.db.accounts {
+                                for i in &self.db.operations {
                                     body.row(30.0, |mut row| {
                                         let mut response: Option<Response> = None;
                                         let mut contents =
@@ -183,9 +167,18 @@ impl eframe::App for App {
                                                     response = Some(variable)
                                                 }
                                             };
-                                        row.col(|ui| contents(ui, format!("ID '{}'", i.id)));
+                                        row.col(|ui| contents(ui, format!("ID '{}'", i.account)));
 
-                                        row.col(|ui| contents(ui, format!("Name '{}'", i.name)));
+                                        row.col(|ui| {
+                                            contents(
+                                                ui,
+                                                format!("Name '{}'", i.operation.date_time),
+                                            )
+                                        });
+
+                                        row.col(|ui| {
+                                            contents(ui, format!("Name '{}'", i.operation.summary))
+                                        });
 
                                         let row_response = row.response();
 
