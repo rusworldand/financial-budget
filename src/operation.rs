@@ -2,6 +2,7 @@ use chrono::Local;
 use chrono::NaiveDate;
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 use crate::account;
 use crate::receipt;
@@ -24,6 +25,7 @@ pub enum Direction {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Operation {
+    pub id: Uuid,
     pub date_time: NaiveDateTime,
     pub operation_type: OperationType,
     pub summary: usize,
@@ -40,6 +42,7 @@ impl Operation {
         receipt: Option<receipt::Receipt>,
     ) -> Self {
         Self {
+            id: Uuid::new_v4(),
             date_time: match date_time {
                 Some(_) => date_time.expect("Empty"),
                 None => Local::now().naive_local(),
