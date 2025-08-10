@@ -61,8 +61,15 @@ impl App {
             selected: None,
         }
     }
+    fn response_compare(variable: Response, temp_response: &mut Option<Response>) {
+        if let Some(response) = temp_response {
+            *response = response.union(variable);
+        } else {
+            *temp_response = Some(variable);
+        }
+    }
     fn table(&mut self, table_type: TableType, ui: &mut Ui) -> Response {
-        let mut response: Option<Response> = match table_type {
+        match table_type {
             TableType::Account => Some(ui.label(format!("Accounts"))),
             TableType::Operation => Some(ui.label(format!("Operations"))),
         };
@@ -71,11 +78,12 @@ impl App {
             .size(Size::exact(100.0)) // for the table
             .vertical(|mut strip| {
                 strip.cell(|ui| {
-                    let mut table = TableBuilder::new(ui)
-                        .resizable(true)
-                        .striped(true)
-                        .id_salt("operations_table")
-                        .cell_layout(egui::Layout::left_to_right(egui::Align::Center));
+                    let mut table = TableBuilder::new(ui).resizable(true).striped(true);
+                    match table_type {
+                        TableType::Account => table = table.id_salt("accounts_table"),
+                        TableType::Operation => table = table.id_salt("operations_table"),
+                    }
+                    table = table.cell_layout(egui::Layout::left_to_right(egui::Align::Center));
                     match table_type {
                         TableType::Account => {
                             table = table.column(Column::auto()).column(Column::auto());
@@ -118,33 +126,47 @@ impl App {
                             }
                         })
                         .body(|mut body| {
-                            let mut inner_response: Option<Response> = None;
                             //let mut temp_response: Option<Response> = None;
-                            let mut contents = |ui: &mut eframe::egui::Ui, text: String| {
-                                let variable = ui.label(text);
-                                if let Some(response) = &mut temp_response {
-                                    *response = response.union(variable)
-                                } else {
-                                    temp_response = Some(variable)
-                                }
-                            };
+                            let contents =
+                                |ui: &mut eframe::egui::Ui,
+                                 text: String,
+                                 response: &mut Option<Response>| {
+                                    App::response_compare(ui.label(text), response);
+                                };
                             match table_type {
                                 TableType::Account => {
                                     for i in &self.db.accounts {
                                         body.row(30.0, |mut row| {
-                                            row.col(|ui| contents(ui, format!("ID '{}'", i.id)));
+                                            let mut inner_response: Option<Response> = None;
+                                            row.col(|ui| {
+                                                contents(
+                                                    ui,
+                                                    format!("ID '{}'", i.id),
+                                                    &mut inner_response,
+                                                )
+                                            });
 
                                             row.col(|ui| {
-                                                contents(ui, format!("Name '{}'", i.name))
+                                                contents(
+                                                    ui,
+                                                    format!("Name '{}'", i.name),
+                                                    &mut inner_response,
+                                                )
                                             });
 
                                             let row_response = row.response();
 
-                                            if let Some(response) = &mut inner_response {
-                                                *response = response.union(row_response)
-                                            } else {
-                                                inner_response = Some(row_response)
-                                            }
+                                            // if let Some(response) = &mut inner_response {
+                                            //     *response = response.union(row_response)
+                                            // } else {
+                                            //     inner_response = Some(row_response)
+                                            // }
+
+                                            App::response_compare(
+                                                row_response,
+                                                &mut inner_response,
+                                            );
+
                                             if let Some(response) = inner_response {
                                                 if response.double_clicked() {
                                                     println!("Double!");
@@ -163,14 +185,20 @@ impl App {
                                 TableType::Operation => {
                                     for i in &self.db.operations {
                                         body.row(30.0, |mut row| {
+                                            let mut inner_response: Option<Response> = None;
                                             row.col(|ui| {
-                                                contents(ui, format!("ID '{}'", i.account))
+                                                contents(
+                                                    ui,
+                                                    format!("ID '{}'", i.account),
+                                                    &mut inner_response,
+                                                )
                                             });
 
                                             row.col(|ui| {
                                                 contents(
                                                     ui,
                                                     format!("Name '{}'", i.operation.date_time),
+                                                    &mut inner_response,
                                                 )
                                             });
 
@@ -178,27 +206,27 @@ impl App {
                                                 contents(
                                                     ui,
                                                     format!("Name '{}'", i.operation.summary),
+                                                    &mut inner_response,
                                                 )
                                             });
                                             let row_response = row.response();
 
-                                            if let Some(response) = &mut inner_response {
-                                                *response = response.union(row_response)
-                                            } else {
-                                                inner_response = Some(row_response)
-                                            }
-                                            if let Some(response) = response {
+                                            App::response_compare(
+                                                row_response,
+                                                &mut inner_response,
+                                            );
+                                            if let Some(response) = inner_response {
                                                 if response.double_clicked() {
                                                     println!("Double!");
-                                                    println!("{}", i.account);
+                                                    println!("{}", i.operation.id);
                                                     self.selected =
-                                                        Some(Selection::Operation(i.account))
+                                                        Some(Selection::Operation(i.operation.id))
                                                 }
                                                 if response.triple_clicked() {
                                                     println!("Triple!");
-                                                    println!("{}", i.account);
+                                                    println!("{}", i.operation.id);
                                                     self.selected =
-                                                        Some(Selection::Operation(i.account))
+                                                        Some(Selection::Operation(i.operation.id))
                                                 }
                                             };
                                         });
@@ -216,161 +244,12 @@ impl eframe::App for App {
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.heading("My egui Application");
 
-            ui.label(format!("Accounts"));
-
-            StripBuilder::new(ui)
-                .size(Size::exact(100.0)) // for the table
-                .vertical(|mut strip| {
-                    strip.cell(|ui| {
-                        let mut table = TableBuilder::new(ui)
-                            .resizable(true)
-                            .striped(true)
-                            .id_salt("operations_table")
-                            .cell_layout(egui::Layout::left_to_right(egui::Align::Center))
-                            .column(Column::auto())
-                            .column(Column::auto())
-                            .min_scrolled_height(0.0)
-                            .max_scroll_height(80.0)
-                            .sense(egui::Sense::click());
-
-                        table
-                            .header(30.0, |mut header| {
-                                header.col(|ui| {
-                                    ui.strong("ID");
-                                    // ui.push_id(id_salt, add_contents)
-                                });
-                                header.col(|ui| {
-                                    ui.strong("Name");
-                                });
-                            })
-                            .body(|mut body| {
-                                for i in &self.db.accounts {
-                                    body.row(30.0, |mut row| {
-                                        let mut response: Option<Response> = None;
-                                        let mut contents =
-                                            |ui: &mut eframe::egui::Ui, text: String| {
-                                                let variable = ui.label(text);
-                                                if let Some(response) = &mut response {
-                                                    *response = response.union(variable)
-                                                } else {
-                                                    response = Some(variable)
-                                                }
-                                            };
-                                        row.col(|ui| contents(ui, format!("ID '{}'", i.id)));
-
-                                        row.col(|ui| contents(ui, format!("Name '{}'", i.name)));
-
-                                        let row_response = row.response();
-
-                                        if let Some(response) = &mut response {
-                                            *response = response.union(row_response)
-                                        } else {
-                                            response = Some(row_response)
-                                        }
-                                        if let Some(response) = response {
-                                            if response.double_clicked() {
-                                                println!("Double!");
-                                                println!("{}", i.id);
-                                                self.selected = Some(Selection::Account(i.id))
-                                            }
-                                            if response.triple_clicked() {
-                                                println!("Triple!");
-                                                println!("{}", i.id);
-                                                self.selected = Some(Selection::Account(i.id))
-                                            }
-                                        };
-                                    });
-                                }
-                            });
-                    });
-                });
-
             //ui.push_id(id_salt, add_contents)
+            self.table(TableType::Account, ui);
 
             ui.separator();
-            ui.label(format!("Operations"));
 
-            StripBuilder::new(ui)
-                .size(Size::exact(200.0)) // for the table
-                .vertical(|mut strip| {
-                    strip.cell(|ui| {
-                        let mut table = TableBuilder::new(ui)
-                            .resizable(true)
-                            .striped(true)
-                            .id_salt("account_table")
-                            .cell_layout(egui::Layout::left_to_right(egui::Align::Center))
-                            .column(Column::auto())
-                            .column(Column::auto())
-                            .column(Column::auto())
-                            .min_scrolled_height(0.0)
-                            .max_scroll_height(100.0)
-                            .sense(egui::Sense::click());
-
-                        table
-                            .header(30.0, |mut header| {
-                                header.col(|ui| {
-                                    ui.strong("Account");
-                                });
-                                header.col(|ui| {
-                                    ui.strong("Date / Time");
-                                });
-                                header.col(|ui| {
-                                    ui.strong("Sum");
-                                });
-                            })
-                            .body(|mut body| {
-                                for i in &self.db.operations {
-                                    body.row(30.0, |mut row| {
-                                        let mut response: Option<Response> = None;
-                                        let mut contents =
-                                            |ui: &mut eframe::egui::Ui, text: String| {
-                                                let variable = ui.label(text);
-                                                if let Some(response) = &mut response {
-                                                    *response = response.union(variable)
-                                                } else {
-                                                    response = Some(variable)
-                                                }
-                                            };
-                                        row.col(|ui| contents(ui, format!("ID '{}'", i.account)));
-
-                                        row.col(|ui| {
-                                            contents(
-                                                ui,
-                                                format!("Name '{}'", i.operation.date_time),
-                                            )
-                                        });
-
-                                        row.col(|ui| {
-                                            contents(ui, format!("Name '{}'", i.operation.summary))
-                                        });
-
-                                        let row_response = row.response();
-
-                                        if let Some(response) = &mut response {
-                                            *response = response.union(row_response)
-                                        } else {
-                                            response = Some(row_response)
-                                        }
-                                        if let Some(response) = response {
-                                            if response.double_clicked() {
-                                                println!("Double!");
-                                                println!("{}", i.account);
-                                                self.selected =
-                                                    Some(Selection::Operation(i.account))
-                                            }
-                                            if response.triple_clicked() {
-                                                println!("Triple!");
-                                                println!("{}", i.account);
-                                                self.selected =
-                                                    Some(Selection::Operation(i.account))
-                                            }
-                                        };
-                                    });
-                                }
-                            });
-                    });
-                });
-            //
+            self.table(TableType::Operation, ui);
         });
         egui::SidePanel::right("right_panel")
             .resizable(true)
