@@ -8,7 +8,7 @@ use uuid::Uuid;
 
 use crate::{account::Account, database::Database, operation::Operation};
 
-use eframe::egui::{self, Response, Ui, response};
+use eframe::egui::{self, Button, Response, Ui, response};
 
 mod account;
 mod database;
@@ -285,6 +285,23 @@ impl eframe::App for App {
                         }
                     }
                 });
+            });
+        egui::TopBottomPanel::bottom("bottom_panel")
+            .resizable(false)
+            .min_height(0.0)
+            .show(ctx, |ui| {
+                if ui.button("New Account").clicked() {
+                    //*boolean = !*boolean;
+                    let window = egui::Window::new("New Account");
+                    window = window
+                        .show(ctx, |ui| {
+                            //;
+                        })
+                        .unwrap();
+                }
+                if ui.button("New Operation").clicked() {
+                    //*boolean = !*boolean;
+                }
             });
     }
 }

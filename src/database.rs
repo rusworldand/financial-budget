@@ -2,7 +2,6 @@ use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::{BufReader, BufWriter, Write};
-use std::path::Path;
 use uuid::Uuid;
 
 use crate::account::*;
@@ -25,7 +24,7 @@ impl Database {
     }
 
     pub fn save(&self, filename: &str) {
-        let mut buffer = File::create(filename).unwrap();
+        let buffer = File::create(filename).unwrap();
         let j = serde_json::to_writer_pretty(buffer, self).unwrap();
     }
 
