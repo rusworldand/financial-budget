@@ -6,7 +6,7 @@ use egui_extras::{Column, Size, StripBuilder, TableBuilder};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::{account::Account, database::Database, database::Operations, operation::Operation};
+use crate::{account::Account, database::Database, operation::Operation};
 
 use eframe::egui::{self, Response, Ui, response};
 
