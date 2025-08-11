@@ -24,6 +24,13 @@ enum TableType {
     Account,
     Operation,
 }
+
+enum Statement {
+    Common,
+    EditAccount,
+    EditOperation,
+    ThripleDialog,
+}
 // fn main() {
 //     let mut db = Database::new();
 
@@ -52,6 +59,7 @@ fn main() -> eframe::Result {
 struct App {
     db: Database,
     selected: Option<Selection>,
+    statement: Statement,
 }
 
 impl App {
@@ -59,6 +67,7 @@ impl App {
         Self {
             db: Database::load("/home/user/rust_projects/file.json".to_string()),
             selected: None,
+            statement: Statement::Common,
         }
     }
     fn response_compare(variable: Response, temp_response: &mut Option<Response>) {
@@ -291,17 +300,77 @@ impl eframe::App for App {
             .min_height(0.0)
             .show(ctx, |ui| {
                 if ui.button("New Account").clicked() {
-                    //*boolean = !*boolean;
-                    let window = egui::Window::new("New Account");
-                    window = window
-                        .show(ctx, |ui| {
-                            //;
-                        })
-                        .unwrap();
+                    self.statement = Statement::EditAccount;
                 }
                 if ui.button("New Operation").clicked() {
-                    //*boolean = !*boolean;
+                    self.statement = Statement::EditOperation;
                 }
             });
+        let mut input_string: String = "".to_string();
+        match self.statement {
+            Statement::Common => {}
+            Statement::EditAccount => {
+                ctx.show_viewport_immediate(
+                    egui::ViewportId::from_hash_of("account creating"),
+                    egui::ViewportBuilder::default()
+                        .with_title("New Account")
+                        .with_inner_size([200.0, 100.0]),
+                    |ctx, class| {
+                        assert!(
+                            class == egui::ViewportClass::Immediate,
+                            "This egui backend doesn't support multiple viewports"
+                        );
+
+                        egui::CentralPanel::default().show(ctx, |ui| {
+                            ui.label("Hello from immediate viewport");
+                            // self.db.add_account(name, account_type, number, bik);
+                        });
+
+                        if ctx.input(|i| i.viewport().close_requested()) {
+                            // Tell parent viewport that we should not show next frame:
+                            // self.show_immediate_viewport = false;
+                            self.statement = Statement::Common;
+                        }
+                    },
+                );
+
+                // let window = eframe::egui::Window::new("New Account");
+                // let window2 = window.show(ctx, |ui| ui.label("text"));
+            }
+            Statement::EditOperation => {
+                ctx.show_viewport_immediate(
+                    egui::ViewportId::from_hash_of("operation creating"),
+                    egui::ViewportBuilder::default()
+                        .with_title("New Account")
+                        .with_inner_size([200.0, 100.0]),
+                    |ctx, class| {
+                        assert!(
+                            class == egui::ViewportClass::Immediate,
+                            "This egui backend doesn't support multiple viewports"
+                        );
+
+                        egui::CentralPanel::default().show(ctx, |ui| {
+                            ui.label("Hello from immediate viewport");
+                            let response = ui.add(egui::TextEdit::singleline(&mut input_string));
+                            //if response.changed() {}
+
+                            // self.db.add_account(name, account_type, number, bik);
+                        });
+
+                        if ctx.input(|i| i.viewport().close_requested()) {
+                            // Tell parent viewport that we should not show next frame:
+                            // self.show_immediate_viewport = false;
+                            self.statement = Statement::Common;
+                        }
+                    },
+                );
+            }
+            Statement::ThripleDialog => {
+                todo!()
+            }
+        }
     }
 }
+
+// let window = eframe::egui::Window::new("New Account");
+// let window2 = window.show(ctx, |ui| ui.label("text"));
