@@ -27,15 +27,31 @@ enum TableType {
 
 enum Statement {
     Common,
-    EditAccount,
+    EditAccount(AccountFields),
     EditOperation,
+    EditReceipt,
     ThripleDialog,
 }
-// fn main() {
-//     let mut db = Database::new();
 
-//     println!("Hello, world!");
-// }
+struct AccountFields {
+    name: String,
+    account_type: account::AccountType,
+    number: String,
+    bik: u32,
+    sum: usize,
+}
+
+impl AccountFields {
+    fn new() -> Self {
+        Self {
+            name: "".to_string(),
+            account_type: account::AccountType::Cash,
+            number: "".to_string(),
+            bik: 100000000,
+            sum: 0,
+        }
+    }
+}
 
 fn main() -> eframe::Result {
     env_logger::init(); // Log to stderr (if you run with `RUST_LOG=debug`).
@@ -60,6 +76,7 @@ struct App {
     db: Database,
     selected: Option<Selection>,
     statement: Statement,
+    //account_fields: Option<AccountFields>,
 }
 
 impl App {
@@ -164,12 +181,6 @@ impl App {
                                             });
 
                                             let row_response = row.response();
-
-                                            // if let Some(response) = &mut inner_response {
-                                            //     *response = response.union(row_response)
-                                            // } else {
-                                            //     inner_response = Some(row_response)
-                                            // }
 
                                             App::response_compare(
                                                 row_response,
@@ -300,16 +311,16 @@ impl eframe::App for App {
             .min_height(0.0)
             .show(ctx, |ui| {
                 if ui.button("New Account").clicked() {
-                    self.statement = Statement::EditAccount;
+                    self.statement = Statement::EditAccount(AccountFields::new());
                 }
                 if ui.button("New Operation").clicked() {
                     self.statement = Statement::EditOperation;
                 }
             });
-        let mut input_string: String = "".to_string();
-        match self.statement {
+
+        match &mut self.statement {
             Statement::Common => {}
-            Statement::EditAccount => {
+            Statement::EditAccount(fields) => {
                 ctx.show_viewport_immediate(
                     egui::ViewportId::from_hash_of("account creating"),
                     egui::ViewportBuilder::default()
@@ -351,6 +362,8 @@ impl eframe::App for App {
 
                         egui::CentralPanel::default().show(ctx, |ui| {
                             ui.label("Hello from immediate viewport");
+                            let mut input_string: String = "".to_string();
+
                             let response = ui.add(egui::TextEdit::singleline(&mut input_string));
                             //if response.changed() {}
 
@@ -368,6 +381,7 @@ impl eframe::App for App {
             Statement::ThripleDialog => {
                 todo!()
             }
+            Statement::EditReceipt => todo!(),
         }
     }
 }
