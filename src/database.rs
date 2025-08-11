@@ -1,3 +1,4 @@
+use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::{BufReader, BufWriter, Write};
@@ -5,28 +6,14 @@ use std::path::Path;
 use uuid::Uuid;
 
 use crate::account::*;
-use crate::operation::Operation;
-
-#[derive(Serialize, Deserialize)]
-pub struct Operations {
-    pub account: Uuid,
-    pub operation: Operation,
-}
-
-impl Operations {
-    pub fn new(account: Uuid, operation: Operation) -> Self {
-        Self {
-            account: account,
-            operation: operation,
-        }
-    }
-}
+use crate::operation::*;
+use crate::receipt;
 
 #[derive(Serialize, Deserialize)]
 pub struct Database {
     db_version: String,
     pub accounts: Vec<Account>,
-    pub operations: Vec<Operations>,
+    pub operations: Vec<Operation>,
 }
 
 impl Database {
@@ -61,10 +48,32 @@ impl Database {
             .push(Account::new(name, account_type, number, bik));
     }
 
-    pub fn add_operations(&mut self, account: Uuid, operation: Operation) {
+    pub fn add_operations(
+        &mut self,
+        account: Uuid,
+        date_time: Option<NaiveDateTime>,
+        operation_type: OperationType,
+        summary: usize,
+        direction: FinanseDirection,
+        receipt: Option<receipt::Receipt>,
+    ) {
         if !self.accounts.iter().any(|item| item.id == account) {
             panic!("Account doesn't exist!");
         }
-        self.operations.push(Operations::new(account, operation))
+        self.operations.push(Operation::new(
+            account,
+            date_time,
+            operation_type,
+            summary,
+            direction,
+            receipt,
+        ))
     }
 }
+
+// account_id: Uuid,
+// date_time: Option<NaiveDateTime>,
+// operation_type: OperationType,
+// summary: usize,
+// direction: Direction,
+// receipt: Option<receipt::Receipt>,

@@ -189,7 +189,7 @@ impl App {
                                             row.col(|ui| {
                                                 contents(
                                                     ui,
-                                                    format!("ID '{}'", i.account),
+                                                    format!("ID '{}'", i.account_id),
                                                     &mut inner_response,
                                                 )
                                             });
@@ -197,7 +197,7 @@ impl App {
                                             row.col(|ui| {
                                                 contents(
                                                     ui,
-                                                    format!("Name '{}'", i.operation.date_time),
+                                                    format!("Name '{}'", i.date_time),
                                                     &mut inner_response,
                                                 )
                                             });
@@ -205,7 +205,7 @@ impl App {
                                             row.col(|ui| {
                                                 contents(
                                                     ui,
-                                                    format!("Name '{}'", i.operation.summary),
+                                                    format!("Name '{}'", i.summary),
                                                     &mut inner_response,
                                                 )
                                             });
@@ -218,15 +218,13 @@ impl App {
                                             if let Some(response) = inner_response {
                                                 if response.double_clicked() {
                                                     println!("Double!");
-                                                    println!("{}", i.operation.id);
-                                                    self.selected =
-                                                        Some(Selection::Operation(i.operation.id))
+                                                    println!("{}", i.id);
+                                                    self.selected = Some(Selection::Operation(i.id))
                                                 }
                                                 if response.triple_clicked() {
                                                     println!("Triple!");
-                                                    println!("{}", i.operation.id);
-                                                    self.selected =
-                                                        Some(Selection::Operation(i.operation.id))
+                                                    println!("{}", i.id);
+                                                    self.selected = Some(Selection::Operation(i.id))
                                                 }
                                             };
                                         });
@@ -243,12 +241,9 @@ impl eframe::App for App {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.heading("My egui Application");
-
             //ui.push_id(id_salt, add_contents)
             self.table(TableType::Account, ui);
-
             ui.separator();
-
             self.table(TableType::Operation, ui);
         });
         egui::SidePanel::right("right_panel")
@@ -282,9 +277,9 @@ impl eframe::App for App {
                                     .db
                                     .operations
                                     .iter()
-                                    .find(|operation| operation.operation.id == *uuid);
+                                    .find(|operation| operation.id == *uuid);
                                 if let Some(element) = iter {
-                                    ui.label(format!("{}", element.operation.id));
+                                    ui.label(format!("{}", element.id));
                                 }
                             }
                         }

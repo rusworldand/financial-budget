@@ -18,7 +18,7 @@ pub enum OperationType {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub enum Direction {
+pub enum FinanseDirection {
     Debet,  //+
     Credit, //-
 }
@@ -27,18 +27,20 @@ pub enum Direction {
 pub struct Operation {
     pub id: Uuid,
     pub date_time: NaiveDateTime,
+    pub account_id: Uuid,
     pub operation_type: OperationType,
     pub summary: usize,
-    pub direction: Direction,
+    pub direction: FinanseDirection,
     pub receipt: Option<receipt::Receipt>, // conduction: bool,
 }
 
 impl Operation {
     pub fn new(
+        account_id: Uuid,
         date_time: Option<NaiveDateTime>,
         operation_type: OperationType,
         summary: usize,
-        direction: Direction,
+        direction: FinanseDirection,
         receipt: Option<receipt::Receipt>,
     ) -> Self {
         Self {
@@ -47,6 +49,7 @@ impl Operation {
                 Some(_) => date_time.expect("Empty"),
                 None => Local::now().naive_local(),
             },
+            account_id: account_id,
             operation_type: operation_type,
             summary: summary,
             direction: direction,
