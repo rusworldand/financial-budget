@@ -27,8 +27,8 @@ enum TableType {
 
 enum Statement {
     Common,
-    EditAccount(AccountFields),
-    EditOperation,
+    EditAccount(Uuid),
+    EditOperation(Uuid),
     EditReceipt,
     ThripleDialog,
 }
@@ -37,7 +37,7 @@ struct AccountFields {
     name: String,
     account_type: account::AccountType,
     number: String,
-    bik: u32,
+    bik: String,
     sum: usize,
 }
 
@@ -47,7 +47,7 @@ impl AccountFields {
             name: "".to_string(),
             account_type: account::AccountType::Cash,
             number: "".to_string(),
-            bik: 100000000,
+            bik: "100000000".to_string(),
             sum: 0,
         }
     }
@@ -76,7 +76,7 @@ struct App {
     db: Database,
     selected: Option<Selection>,
     statement: Statement,
-    //account_fields: Option<AccountFields>,
+    account_fields: AccountFields,
 }
 
 impl App {
@@ -85,6 +85,7 @@ impl App {
             db: Database::load("/home/user/rust_projects/file.json".to_string()),
             selected: None,
             statement: Statement::Common,
+            account_fields: AccountFields::new(),
         }
     }
     fn response_compare(variable: Response, temp_response: &mut Option<Response>) {
@@ -305,26 +306,50 @@ impl eframe::App for App {
                         }
                     }
                 });
+
+                if let Some(selection) = &self.selected {
+                    if ui.button("Edit").clicked() {
+                        match selection {
+                            Selection::Account(uuid) => {
+                                let iter = &self
+                                    .db
+                                    .accounts
+                                    .iter()
+                                    .find(|account| account.id == *uuid)
+                                    .unwrap();
+
+                                self.account_fields.name = iter.name.clone();
+                                self.account_fields.account_type = iter.account_type.clone();
+                                self.account_fields.number = iter.number.clone();
+                                self.account_fields.bik = iter.bik.to_string();
+                            }
+                            Selection::Operation(uuid) => {}
+                        }
+                    }
+                }
             });
         egui::TopBottomPanel::bottom("bottom_panel")
             .resizable(false)
             .min_height(0.0)
             .show(ctx, |ui| {
                 if ui.button("New Account").clicked() {
-                    self.statement = Statement::EditAccount(AccountFields::new());
+                    self.statement = Statement::EditAccount(Uuid::new_v4());
+                    self.account_fields = AccountFields::new();
                 }
                 if ui.button("New Operation").clicked() {
-                    self.statement = Statement::EditOperation;
+                    self.statement = Statement::EditOperation(Uuid::new_v4());
                 }
             });
 
         match &mut self.statement {
             Statement::Common => {}
-            Statement::EditAccount(fields) => {
+            Statement::EditAccount(uuid) => {
+                //if let Some(AccountFields) = fields {}
+                let mut iter = &self.db.accounts.iter().find(|account| account.id == *uuid);
                 ctx.show_viewport_immediate(
-                    egui::ViewportId::from_hash_of("account creating"),
+                    egui::ViewportId::from_hash_of("account window"),
                     egui::ViewportBuilder::default()
-                        .with_title("New Account")
+                        .with_title("Edit Account")
                         .with_inner_size([200.0, 100.0]),
                     |ctx, class| {
                         assert!(
@@ -332,12 +357,71 @@ impl eframe::App for App {
                             "This egui backend doesn't support multiple viewports"
                         );
 
+                        let mut close_request: bool = false;
+
                         egui::CentralPanel::default().show(ctx, |ui| {
-                            ui.label("Hello from immediate viewport");
+                            ui.label("Name");
                             // self.db.add_account(name, account_type, number, bik);
+                            //let mut response: Response;
+                            //response =
+                            ui.add(egui::TextEdit::singleline(&mut self.account_fields.name));
+                            egui::ComboBox::from_label("Select one!")
+                                .selected_text(format!("{:?}", self.account_fields.account_type))
+                                .show_ui(ui, |ui| {
+                                    ui.selectable_value(
+                                        &mut self.account_fields.account_type,
+                                        account::AccountType::Account,
+                                        "Common Account",
+                                    );
+                                    ui.selectable_value(
+                                        &mut self.account_fields.account_type,
+                                        account::AccountType::Cash,
+                                        "Cash",
+                                    );
+                                    ui.selectable_value(
+                                        &mut self.account_fields.account_type,
+                                        account::AccountType::DebetCard,
+                                        "DebetCard",
+                                    );
+                                    ui.selectable_value(
+                                        &mut self.account_fields.account_type,
+                                        account::AccountType::CreditCard,
+                                        "CreditCard",
+                                    );
+                                    ui.selectable_value(
+                                        &mut self.account_fields.account_type,
+                                        account::AccountType::CreditAccount,
+                                        "CreditAccount",
+                                    );
+                                    ui.selectable_value(
+                                        &mut self.account_fields.account_type,
+                                        account::AccountType::AccumulativeAccount,
+                                        "AccumulativeAccount",
+                                    );
+                                    ui.selectable_value(
+                                        &mut self.account_fields.account_type,
+                                        account::AccountType::Deposit,
+                                        "Deposit",
+                                    );
+                                });
+
+                            ui.add(
+                                egui::TextEdit::singleline(&mut self.account_fields.number)
+                                    .char_limit(30),
+                            );
+                            ui.add(
+                                egui::TextEdit::singleline(&mut self.account_fields.bik)
+                                    .char_limit(9),
+                            );
+                            if ui.button("Apply").clicked() {
+                                if let Some(element) = iter {
+                                    element.account_type = self.account_fields.account_type.clone();
+                                }
+                                close_request = true;
+                            }
                         });
 
-                        if ctx.input(|i| i.viewport().close_requested()) {
+                        if ctx.input(|i| i.viewport().close_requested()) || close_request {
                             // Tell parent viewport that we should not show next frame:
                             // self.show_immediate_viewport = false;
                             self.statement = Statement::Common;
@@ -348,7 +432,7 @@ impl eframe::App for App {
                 // let window = eframe::egui::Window::new("New Account");
                 // let window2 = window.show(ctx, |ui| ui.label("text"));
             }
-            Statement::EditOperation => {
+            Statement::EditOperation(uuid) => {
                 ctx.show_viewport_immediate(
                     egui::ViewportId::from_hash_of("operation creating"),
                     egui::ViewportBuilder::default()
