@@ -345,7 +345,7 @@ impl eframe::App for App {
             Statement::Common => {}
             Statement::EditAccount(uuid) => {
                 //if let Some(AccountFields) = fields {}
-                let mut iter = &self.db.accounts.iter().find(|account| account.id == *uuid);
+                let acc_id = uuid.clone();
                 ctx.show_viewport_immediate(
                     egui::ViewportId::from_hash_of("account window"),
                     egui::ViewportBuilder::default()
@@ -414,8 +414,16 @@ impl eframe::App for App {
                                     .char_limit(9),
                             );
                             if ui.button("Apply").clicked() {
+                                let iter = self
+                                    .db
+                                    .accounts
+                                    .iter_mut()
+                                    .find(|account| account.id == acc_id);
                                 if let Some(element) = iter {
                                     element.account_type = self.account_fields.account_type.clone();
+                                    element.name = self.account_fields.name.clone();
+                                    element.number = self.account_fields.number.clone();
+                                    element.bik = self.account_fields.bik;
                                 }
                                 close_request = true;
                             }
