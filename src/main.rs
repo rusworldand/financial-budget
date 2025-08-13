@@ -322,6 +322,7 @@ impl eframe::App for App {
                                 self.account_fields.account_type = iter.account_type.clone();
                                 self.account_fields.number = iter.number.clone();
                                 self.account_fields.bik = iter.bik.to_string();
+                                self.statement = Statement::EditAccount(*uuid);
                             }
                             Selection::Operation(uuid) => {}
                         }
@@ -338,6 +339,9 @@ impl eframe::App for App {
                 }
                 if ui.button("New Operation").clicked() {
                     self.statement = Statement::EditOperation(Uuid::new_v4());
+                }
+                if ui.button("Save").clicked() {
+                    self.db.save("/home/user/rust_projects/file.json");
                 }
             });
 
@@ -423,7 +427,16 @@ impl eframe::App for App {
                                     element.account_type = self.account_fields.account_type.clone();
                                     element.name = self.account_fields.name.clone();
                                     element.number = self.account_fields.number.clone();
-                                    element.bik = self.account_fields.bik;
+                                    element.bik = self.account_fields.bik.parse::<u32>().unwrap();
+                                } else {
+                                    self.db.accounts.push(Account {
+                                        id: acc_id,
+                                        name: self.account_fields.name.clone(),
+                                        account_type: self.account_fields.account_type.clone(),
+                                        number: self.account_fields.number.clone(),
+                                        bik: self.account_fields.bik.parse::<u32>().unwrap(),
+                                        sum: 0,
+                                    });
                                 }
                                 close_request = true;
                             }
@@ -432,6 +445,8 @@ impl eframe::App for App {
                         if ctx.input(|i| i.viewport().close_requested()) || close_request {
                             // Tell parent viewport that we should not show next frame:
                             // self.show_immediate_viewport = false;
+                            //
+                            self.account_fields = AccountFields::new();
                             self.statement = Statement::Common;
                         }
                     },
