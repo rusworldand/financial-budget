@@ -18,4 +18,6 @@ env_logger = { version = "0.10", default-features = false, features = [
 # eframe = { path = "../egui/crates/eframe" }
 # egui_extras = { path = "../egui/crates/egui_extras" }
 eframe = { git = "ssh://git@github.com/zezic/egui.git", rev = "f34a9498d19b53a6a79e8bf72d7e2da19c8c5af1" }
-egui_extras = { git = "ssh://git@github.com/zezic/egui.git", rev = "f34a9498d19b53a6a79e8bf72d7e2da19c8c5af1" }
+egui_extras = { git = "ssh://git@github.com/zezic/egui.git", rev = "f34a9498d19b53a6a79e8bf72d7e2da19c8c5af1", features = [
+    "datepicker",
+] }

@@ -1,7 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
 #![allow(rustdoc::missing_crate_level_docs)] // it's an example
 
-use chrono::{Date, DateTime, Local, NaiveDate, NaiveDateTime, Utc};
+use chrono::{Date, DateTime, Local, NaiveDate, NaiveDateTime, NaiveTime, Utc};
 use egui_extras::{Column, Size, StripBuilder, TableBuilder};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -67,21 +67,25 @@ impl AccountFields {
 // receipt: receipt,
 
 struct OperationFields {
-    date_time: NaiveDateTime,
+    date: NaiveDate,
+    time: NaiveTime,
     account_id: Uuid,
     operation_type: OperationType,
-    summary: usize,
+    summary: String,
     direction: FinanseDirection,
+    receipt: Uuid,
 }
 
 impl OperationFields {
     fn new() -> Self {
         Self {
-            date_time: DateTime::naive_local(&chrono::Local::now()),
+            date: chrono::Local::now().date_naive(),
+            time: chrono::Local::now().time(),
             account_id: Uuid::nil(),
             operation_type: OperationType::Initial,
-            summary: 0,
+            summary: "0".to_string(),
             direction: FinanseDirection::Credit,
+            receipt: Uuid::nil(),
         }
     }
 }
@@ -367,10 +371,11 @@ impl eframe::App for App {
                                     .find(|operation| operation.id == *uuid)
                                     .unwrap();
 
-                                self.operation_fields.date_time = iter.date_time;
+                                self.operation_fields.date = iter.date_time.date();
+                                self.operation_fields.time = iter.date_time.time();
                                 self.operation_fields.account_id = iter.account_id;
                                 self.operation_fields.operation_type = iter.operation_type.clone();
-                                self.operation_fields.summary = iter.summary;
+                                self.operation_fields.summary = iter.summary.to_string();
                                 self.operation_fields.direction = iter.direction.clone();
                                 self.statement = Statement::EditOperation(*uuid);
                             }
@@ -521,6 +526,10 @@ impl eframe::App for App {
 
                         egui::CentralPanel::default().show(ctx, |ui| {
                             ui.label("Date and time");
+                            ui.add(egui_extras::DatePickerButton::new(
+                                &mut self.operation_fields.date,
+                            ));
+                            ui.add(egui::DragValue::new(&mut my_f32).speed(1).range(0..=12));
 
                             ui.label("Account");
                             egui::ComboBox::from_label("Select account!")
@@ -573,9 +582,25 @@ impl eframe::App for App {
                                     );
                                 });
                             ui.label("Summ");
+                            ui.add(egui::TextEdit::singleline(
+                                &mut self.operation_fields.summary,
+                            ));
 
                             ui.label("Direction");
-
+                            egui::ComboBox::from_label("Select type!")
+                                .selected_text(format!("{:?}", self.operation_fields.direction))
+                                .show_ui(ui, |ui| {
+                                    ui.selectable_value(
+                                        &mut self.operation_fields.direction,
+                                        operation::FinanseDirection::Debet,
+                                        "Debet",
+                                    );
+                                    ui.selectable_value(
+                                        &mut self.operation_fields.direction,
+                                        operation::FinanseDirection::Credit,
+                                        "Credit",
+                                    );
+                                });
                             // self.operation_fields.date_time = iter.date_time;
                             // self.operation_fields.account_id = iter.account_id;
                             // self.operation_fields.operation_type = iter.operation_type.clone();

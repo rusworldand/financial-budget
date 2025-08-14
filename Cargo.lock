@@ -847,6 +847,7 @@ version = "0.32.0"
 source = "git+ssh://git@github.com/zezic/egui.git?rev=f34a9498d19b53a6a79e8bf72d7e2da19c8c5af1#f34a9498d19b53a6a79e8bf72d7e2da19c8c5af1"
 dependencies = [
  "ahash",
+ "chrono",
  "egui",
  "enum-map",
  "log",
