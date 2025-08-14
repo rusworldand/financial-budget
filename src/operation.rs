@@ -5,7 +5,7 @@ use uuid::Uuid;
 
 use crate::receipt;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub enum OperationType {
     Initial,
     Buy,
@@ -15,7 +15,7 @@ pub enum OperationType {
     ClosingAccounts,        // Закрытие счёта
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub enum FinanseDirection {
     Debet,  //+
     Credit, //-

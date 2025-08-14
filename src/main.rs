@@ -1,12 +1,16 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
 #![allow(rustdoc::missing_crate_level_docs)] // it's an example
 
-use chrono::{Date, Local, NaiveDateTime, Utc};
+use chrono::{Date, DateTime, Local, NaiveDate, NaiveDateTime, Utc};
 use egui_extras::{Column, Size, StripBuilder, TableBuilder};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::{account::Account, database::Database, operation::Operation};
+use crate::{
+    account::Account,
+    database::Database,
+    operation::{FinanseDirection, Operation, OperationType},
+};
 
 use eframe::egui::{self, Button, Response, Ui, response};
 
@@ -38,7 +42,6 @@ struct AccountFields {
     account_type: account::AccountType,
     number: String,
     bik: String,
-    sum: usize,
 }
 
 impl AccountFields {
@@ -48,7 +51,37 @@ impl AccountFields {
             account_type: account::AccountType::Cash,
             number: "".to_string(),
             bik: "100000000".to_string(),
-            sum: 0,
+        }
+    }
+}
+
+// id: Uuid::new_v4(),
+// date_time: match date_time {
+//     Some(_) => date_time.expect("Empty"),
+//     None => Local::now().naive_local(),
+// },
+// account_id: account_id,
+// operation_type: operation_type,
+// summary: summary,
+// direction: direction,
+// receipt: receipt,
+
+struct OperationFields {
+    date_time: NaiveDateTime,
+    account_id: Uuid,
+    operation_type: OperationType,
+    summary: usize,
+    direction: FinanseDirection,
+}
+
+impl OperationFields {
+    fn new() -> Self {
+        Self {
+            date_time: DateTime::naive_local(&chrono::Local::now()),
+            account_id: Uuid::nil(),
+            operation_type: OperationType::Initial,
+            summary: 0,
+            direction: FinanseDirection::Credit,
         }
     }
 }
@@ -77,6 +110,7 @@ struct App {
     selected: Option<Selection>,
     statement: Statement,
     account_fields: AccountFields,
+    operation_fields: OperationFields,
 }
 
 impl App {
@@ -86,6 +120,7 @@ impl App {
             selected: None,
             statement: Statement::Common,
             account_fields: AccountFields::new(),
+            operation_fields: OperationFields::new(),
         }
     }
     fn response_compare(variable: Response, temp_response: &mut Option<Response>) {
@@ -124,7 +159,7 @@ impl App {
                     }
                     table = table
                         .min_scrolled_height(0.0)
-                        .max_scroll_height(200.0)
+                        .max_scroll_height(500.0)
                         .sense(egui::Sense::click());
 
                     table
@@ -324,7 +359,21 @@ impl eframe::App for App {
                                 self.account_fields.bik = iter.bik.to_string();
                                 self.statement = Statement::EditAccount(*uuid);
                             }
-                            Selection::Operation(uuid) => {}
+                            Selection::Operation(uuid) => {
+                                let iter = &self
+                                    .db
+                                    .operations
+                                    .iter()
+                                    .find(|operation| operation.id == *uuid)
+                                    .unwrap();
+
+                                self.operation_fields.date_time = iter.date_time;
+                                self.operation_fields.account_id = iter.account_id;
+                                self.operation_fields.operation_type = iter.operation_type.clone();
+                                self.operation_fields.summary = iter.summary;
+                                self.operation_fields.direction = iter.direction.clone();
+                                self.statement = Statement::EditOperation(*uuid);
+                            }
                         }
                     }
                 }
@@ -353,8 +402,8 @@ impl eframe::App for App {
                 ctx.show_viewport_immediate(
                     egui::ViewportId::from_hash_of("account window"),
                     egui::ViewportBuilder::default()
-                        .with_title("Edit Account")
-                        .with_inner_size([200.0, 100.0]),
+                        .with_title("Account")
+                        .with_inner_size([400.0, 200.0]),
                     |ctx, class| {
                         assert!(
                             class == egui::ViewportClass::Immediate,
@@ -456,30 +505,88 @@ impl eframe::App for App {
                 // let window2 = window.show(ctx, |ui| ui.label("text"));
             }
             Statement::EditOperation(uuid) => {
+                let acc_id = uuid.clone();
                 ctx.show_viewport_immediate(
-                    egui::ViewportId::from_hash_of("operation creating"),
+                    egui::ViewportId::from_hash_of("operation window"),
                     egui::ViewportBuilder::default()
-                        .with_title("New Account")
-                        .with_inner_size([200.0, 100.0]),
+                        .with_title("Operation")
+                        .with_inner_size([400.0, 200.0]),
                     |ctx, class| {
                         assert!(
                             class == egui::ViewportClass::Immediate,
                             "This egui backend doesn't support multiple viewports"
                         );
 
+                        let mut close_request: bool = false;
+
                         egui::CentralPanel::default().show(ctx, |ui| {
-                            ui.label("Hello from immediate viewport");
-                            let mut input_string: String = "".to_string();
+                            ui.label("Date and time");
 
-                            let response = ui.add(egui::TextEdit::singleline(&mut input_string));
-                            //if response.changed() {}
+                            ui.label("Account");
+                            egui::ComboBox::from_label("Select account!")
+                                .selected_text(format!("{:?}", self.operation_fields.account_id))
+                                .show_ui(ui, |ui| {
+                                    for element in self.db.accounts.iter() {
+                                        ui.selectable_value(
+                                            &mut self.operation_fields.account_id,
+                                            element.id,
+                                            format!("{}", element.name),
+                                        );
+                                    }
+                                });
+                            ui.label("Operation type");
+                            egui::ComboBox::from_label("Select type!")
+                                .selected_text(format!(
+                                    "{:?}",
+                                    self.operation_fields.operation_type
+                                ))
+                                .show_ui(ui, |ui| {
+                                    ui.selectable_value(
+                                        &mut self.operation_fields.operation_type,
+                                        operation::OperationType::Initial,
+                                        "Initial",
+                                    );
+                                    ui.selectable_value(
+                                        &mut self.operation_fields.operation_type,
+                                        operation::OperationType::Buy,
+                                        "Buy",
+                                    );
+                                    ui.selectable_value(
+                                        &mut self.operation_fields.operation_type,
+                                        operation::OperationType::Sell,
+                                        "Sell",
+                                    );
+                                    ui.selectable_value(
+                                        &mut self.operation_fields.operation_type,
+                                        operation::OperationType::DebetingAccounts,
+                                        "Debeting Accounts",
+                                    );
+                                    ui.selectable_value(
+                                        &mut self.operation_fields.operation_type,
+                                        operation::OperationType::WithdrawalFromAccounts,
+                                        "Withdrawal From Account",
+                                    );
+                                    ui.selectable_value(
+                                        &mut self.operation_fields.operation_type,
+                                        operation::OperationType::ClosingAccounts,
+                                        "Closing Account",
+                                    );
+                                });
+                            ui.label("Summ");
 
-                            // self.db.add_account(name, account_type, number, bik);
+                            ui.label("Direction");
+
+                            // self.operation_fields.date_time = iter.date_time;
+                            // self.operation_fields.account_id = iter.account_id;
+                            // self.operation_fields.operation_type = iter.operation_type.clone();
+                            // self.operation_fields.summary = iter.summary;
+                            // self.operation_fields.direction = iter.direction.clone();
                         });
 
-                        if ctx.input(|i| i.viewport().close_requested()) {
+                        if ctx.input(|i| i.viewport().close_requested()) || close_request {
                             // Tell parent viewport that we should not show next frame:
                             // self.show_immediate_viewport = false;
+                            self.operation_fields = OperationFields::new();
                             self.statement = Statement::Common;
                         }
                     },
