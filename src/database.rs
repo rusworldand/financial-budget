@@ -6,13 +6,14 @@ use uuid::Uuid;
 
 use crate::account::*;
 use crate::operation::*;
-use crate::receipt;
+use crate::receipt::*;
 
 #[derive(Serialize, Deserialize)]
 pub struct Database {
     db_version: String,
     pub accounts: Vec<Account>,
     pub operations: Vec<Operation>,
+    pub receipts: Vec<Receipt>,
 }
 
 impl Database {
@@ -33,6 +34,7 @@ impl Database {
             db_version: "0.0.1".to_string(),
             accounts: Vec::new(),
             operations: Vec::new(),
+            receipts: Vec::new(),
         }
     }
 
@@ -54,7 +56,7 @@ impl Database {
         operation_type: OperationType,
         summary: usize,
         direction: FinanseDirection,
-        receipt: Option<receipt::Receipt>,
+        receipt: Option<Uuid>,
     ) {
         if !self.accounts.iter().any(|item| item.id == account) {
             panic!("Account doesn't exist!");

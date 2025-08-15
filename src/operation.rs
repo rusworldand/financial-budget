@@ -29,7 +29,7 @@ pub struct Operation {
     pub operation_type: OperationType,
     pub summary: usize,
     pub direction: FinanseDirection,
-    pub receipt: Option<receipt::Receipt>, // conduction: bool,
+    pub receipt_id: Option<Uuid>, // conduction: bool,
 }
 
 impl Operation {
@@ -39,7 +39,7 @@ impl Operation {
         operation_type: OperationType,
         summary: usize,
         direction: FinanseDirection,
-        receipt: Option<receipt::Receipt>,
+        receipt: Option<Uuid>,
     ) -> Self {
         Self {
             id: Uuid::new_v4(),
@@ -51,7 +51,7 @@ impl Operation {
             operation_type: operation_type,
             summary: summary,
             direction: direction,
-            receipt: receipt,
+            receipt_id: receipt,
         }
     }
 }

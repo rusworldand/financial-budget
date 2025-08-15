@@ -32,8 +32,8 @@ enum TableType {
 enum Statement {
     Common,
     EditAccount(Uuid),
-    EditOperation(Uuid),
-    EditReceipt,
+    EditOperation(Uuid, bool),
+    EditReceipt(Uuid, Uuid, bool),
     ThripleDialog,
 }
 
@@ -143,7 +143,7 @@ impl App {
         };
 
         StripBuilder::new(ui)
-            .size(Size::exact(100.0)) // for the table
+            .size(Size::exact(200.0)) // for the table
             .vertical(|mut strip| {
                 strip.cell(|ui| {
                     let mut table = TableBuilder::new(ui).resizable(true).striped(true);
@@ -380,7 +380,7 @@ impl eframe::App for App {
                                 self.operation_fields.operation_type = iter.operation_type.clone();
                                 self.operation_fields.summary = iter.summary.to_string();
                                 self.operation_fields.direction = iter.direction.clone();
-                                self.statement = Statement::EditOperation(*uuid);
+                                self.statement = Statement::EditOperation(*uuid, false);
                             }
                         }
                     }
@@ -395,7 +395,7 @@ impl eframe::App for App {
                     self.account_fields = AccountFields::new();
                 }
                 if ui.button("New Operation").clicked() {
-                    self.statement = Statement::EditOperation(Uuid::new_v4());
+                    self.statement = Statement::EditOperation(Uuid::new_v4(), false);
                 }
                 if ui.button("Save").clicked() {
                     self.db.save("/home/user/rust_projects/file.json");
@@ -512,12 +512,187 @@ impl eframe::App for App {
                 // let window = eframe::egui::Window::new("New Account");
                 // let window2 = window.show(ctx, |ui| ui.label("text"));
             }
-            Statement::EditOperation(uuid) => {
-                let op_id = uuid.clone();
+            Statement::EditOperation(uuid, signal) => {
+                if !*signal {
+                    let op_id = uuid.clone();
+                    ctx.show_viewport_immediate(
+                        egui::ViewportId::from_hash_of("operation window"),
+                        egui::ViewportBuilder::default()
+                            .with_title("Operation")
+                            .with_inner_size([400.0, 400.0]),
+                        |ctx, class| {
+                            assert!(
+                                class == egui::ViewportClass::Immediate,
+                                "This egui backend doesn't support multiple viewports"
+                            );
+
+                            let mut close_request: bool = false;
+
+                            egui::CentralPanel::default().show(ctx, |ui| {
+                                ui.label("Date and time");
+                                ui.add(egui_extras::DatePickerButton::new(
+                                    &mut self.operation_fields.date,
+                                ));
+                                ui.add(
+                                    egui::DragValue::new(&mut self.operation_fields.hour)
+                                        .speed(1)
+                                        .range(0..=23),
+                                );
+                                ui.add(
+                                    egui::DragValue::new(&mut self.operation_fields.minute)
+                                        .speed(1)
+                                        .range(0..=59),
+                                );
+
+                                ui.label("Account");
+                                egui::ComboBox::from_label("Select account!")
+                                    .selected_text(format!(
+                                        "{:?}",
+                                        self.operation_fields.account_id
+                                    ))
+                                    .show_ui(ui, |ui| {
+                                        for element in self.db.accounts.iter() {
+                                            ui.selectable_value(
+                                                &mut self.operation_fields.account_id,
+                                                element.id,
+                                                format!("{}", element.name),
+                                            );
+                                        }
+                                    });
+                                ui.label("Operation type");
+                                egui::ComboBox::from_label("Select type!")
+                                    .selected_text(format!(
+                                        "{:?}",
+                                        self.operation_fields.operation_type
+                                    ))
+                                    .show_ui(ui, |ui| {
+                                        ui.selectable_value(
+                                            &mut self.operation_fields.operation_type,
+                                            operation::OperationType::Initial,
+                                            "Initial",
+                                        );
+                                        ui.selectable_value(
+                                            &mut self.operation_fields.operation_type,
+                                            operation::OperationType::Buy,
+                                            "Buy",
+                                        );
+                                        ui.selectable_value(
+                                            &mut self.operation_fields.operation_type,
+                                            operation::OperationType::Sell,
+                                            "Sell",
+                                        );
+                                        ui.selectable_value(
+                                            &mut self.operation_fields.operation_type,
+                                            operation::OperationType::DebetingAccounts,
+                                            "Debeting Accounts",
+                                        );
+                                        ui.selectable_value(
+                                            &mut self.operation_fields.operation_type,
+                                            operation::OperationType::WithdrawalFromAccounts,
+                                            "Withdrawal From Account",
+                                        );
+                                        ui.selectable_value(
+                                            &mut self.operation_fields.operation_type,
+                                            operation::OperationType::ClosingAccounts,
+                                            "Closing Account",
+                                        );
+                                    });
+                                ui.label("Summ");
+                                ui.add(egui::TextEdit::singleline(
+                                    &mut self.operation_fields.summary,
+                                ));
+
+                                ui.label("Direction");
+                                egui::ComboBox::from_label("Select direction!")
+                                    .selected_text(format!("{:?}", self.operation_fields.direction))
+                                    .show_ui(ui, |ui| {
+                                        ui.selectable_value(
+                                            &mut self.operation_fields.direction,
+                                            operation::FinanseDirection::Debet,
+                                            "Debet",
+                                        );
+                                        ui.selectable_value(
+                                            &mut self.operation_fields.direction,
+                                            operation::FinanseDirection::Credit,
+                                            "Credit",
+                                        );
+                                    });
+                                // self.operation_fields.date = iter.date_time.date();
+                                // self.operation_fields.time = iter.date_time.time();
+                                // self.operation_fields.hour = self.operation_fields.time.hour();
+                                // self.operation_fields.minute = self.operation_fields.time.minute();
+                                // self.operation_fields.account_id = iter.account_id;
+                                // self.operation_fields.operation_type = iter.operation_type.clone();
+                                // self.operation_fields.summary = iter.summary.to_string();
+                                // self.operation_fields.direction = iter.direction.clone();
+
+                                if ui.button("Apply").clicked() {
+                                    let iter = self
+                                        .db
+                                        .operations
+                                        .iter_mut()
+                                        .find(|operation| operation.id == op_id);
+                                    let time = chrono::NaiveTime::from_hms_opt(
+                                        self.operation_fields.hour,
+                                        self.operation_fields.minute,
+                                        0,
+                                    )
+                                    .unwrap();
+                                    if let Some(element) = iter {
+                                        element.date_time = chrono::NaiveDateTime::new(
+                                            self.operation_fields.date,
+                                            time,
+                                        );
+                                        element.account_id = self.operation_fields.account_id;
+                                        element.operation_type =
+                                            self.operation_fields.operation_type.clone();
+                                        element.summary =
+                                            self.operation_fields.summary.parse::<usize>().unwrap();
+                                        element.direction = self.operation_fields.direction.clone();
+                                    } else {
+                                        self.db.operations.push(Operation {
+                                            id: op_id,
+                                            date_time: chrono::NaiveDateTime::new(
+                                                self.operation_fields.date,
+                                                time,
+                                            ),
+                                            account_id: self.operation_fields.account_id,
+                                            operation_type: self
+                                                .operation_fields
+                                                .operation_type
+                                                .clone(),
+                                            direction: self.operation_fields.direction.clone(),
+                                            receipt_id: None,
+                                            summary: self
+                                                .operation_fields
+                                                .summary
+                                                .parse::<usize>()
+                                                .unwrap(),
+                                        });
+                                    }
+                                    close_request = true;
+                                }
+                            });
+
+                            if ctx.input(|i| i.viewport().close_requested()) || close_request {
+                                // Tell parent viewport that we should not show next frame:
+                                // self.show_immediate_viewport = false;
+                                self.operation_fields = OperationFields::new();
+                                self.statement = Statement::Common;
+                            }
+                        },
+                    );
+                } else {
+                    todo!()
+                }
+            }
+
+            Statement::EditReceipt(uuid, op_uuid, signal) => {
+                let acc_id = uuid.clone();
                 ctx.show_viewport_immediate(
-                    egui::ViewportId::from_hash_of("operation window"),
+                    egui::ViewportId::from_hash_of("account window"),
                     egui::ViewportBuilder::default()
-                        .with_title("Operation")
+                        .with_title("Account")
                         .with_inner_size([400.0, 200.0]),
                     |ctx, class| {
                         assert!(
@@ -528,144 +703,29 @@ impl eframe::App for App {
                         let mut close_request: bool = false;
 
                         egui::CentralPanel::default().show(ctx, |ui| {
-                            ui.label("Date and time");
-                            ui.add(egui_extras::DatePickerButton::new(
-                                &mut self.operation_fields.date,
-                            ));
-                            ui.add(
-                                egui::DragValue::new(&mut self.operation_fields.hour)
-                                    .speed(1)
-                                    .range(0..=23),
-                            );
-                            ui.add(
-                                egui::DragValue::new(&mut self.operation_fields.minute)
-                                    .speed(1)
-                                    .range(0..=59),
-                            );
-
-                            ui.label("Account");
-                            egui::ComboBox::from_label("Select account!")
-                                .selected_text(format!("{:?}", self.operation_fields.account_id))
-                                .show_ui(ui, |ui| {
-                                    for element in self.db.accounts.iter() {
-                                        ui.selectable_value(
-                                            &mut self.operation_fields.account_id,
-                                            element.id,
-                                            format!("{}", element.name),
-                                        );
-                                    }
-                                });
-                            ui.label("Operation type");
-                            egui::ComboBox::from_label("Select type!")
-                                .selected_text(format!(
-                                    "{:?}",
-                                    self.operation_fields.operation_type
-                                ))
-                                .show_ui(ui, |ui| {
-                                    ui.selectable_value(
-                                        &mut self.operation_fields.operation_type,
-                                        operation::OperationType::Initial,
-                                        "Initial",
-                                    );
-                                    ui.selectable_value(
-                                        &mut self.operation_fields.operation_type,
-                                        operation::OperationType::Buy,
-                                        "Buy",
-                                    );
-                                    ui.selectable_value(
-                                        &mut self.operation_fields.operation_type,
-                                        operation::OperationType::Sell,
-                                        "Sell",
-                                    );
-                                    ui.selectable_value(
-                                        &mut self.operation_fields.operation_type,
-                                        operation::OperationType::DebetingAccounts,
-                                        "Debeting Accounts",
-                                    );
-                                    ui.selectable_value(
-                                        &mut self.operation_fields.operation_type,
-                                        operation::OperationType::WithdrawalFromAccounts,
-                                        "Withdrawal From Account",
-                                    );
-                                    ui.selectable_value(
-                                        &mut self.operation_fields.operation_type,
-                                        operation::OperationType::ClosingAccounts,
-                                        "Closing Account",
-                                    );
-                                });
-                            ui.label("Summ");
-                            ui.add(egui::TextEdit::singleline(
-                                &mut self.operation_fields.summary,
-                            ));
-
-                            ui.label("Direction");
-                            egui::ComboBox::from_label("Select direction!")
-                                .selected_text(format!("{:?}", self.operation_fields.direction))
-                                .show_ui(ui, |ui| {
-                                    ui.selectable_value(
-                                        &mut self.operation_fields.direction,
-                                        operation::FinanseDirection::Debet,
-                                        "Debet",
-                                    );
-                                    ui.selectable_value(
-                                        &mut self.operation_fields.direction,
-                                        operation::FinanseDirection::Credit,
-                                        "Credit",
-                                    );
-                                });
-                            // self.operation_fields.date = iter.date_time.date();
-                            // self.operation_fields.time = iter.date_time.time();
-                            // self.operation_fields.hour = self.operation_fields.time.hour();
-                            // self.operation_fields.minute = self.operation_fields.time.minute();
-                            // self.operation_fields.account_id = iter.account_id;
-                            // self.operation_fields.operation_type = iter.operation_type.clone();
-                            // self.operation_fields.summary = iter.summary.to_string();
-                            // self.operation_fields.direction = iter.direction.clone();
+                            ui.label("Name");
 
                             if ui.button("Apply").clicked() {
                                 let iter = self
                                     .db
-                                    .operations
+                                    .accounts
                                     .iter_mut()
-                                    .find(|operation| operation.id == op_id);
-                                let time = chrono::NaiveTime::from_hms_opt(
-                                    self.operation_fields.hour,
-                                    self.operation_fields.minute,
-                                    0,
-                                )
-                                .unwrap();
-                                if let Some(element) = iter {
-                                    element.date_time = chrono::NaiveDateTime::new(
-                                        self.operation_fields.date,
-                                        time,
-                                    );
-                                    element.account_id = self.operation_fields.account_id;
-                                    element.operation_type =
-                                        self.operation_fields.operation_type.clone();
-                                    element.summary =
-                                        self.operation_fields.summary.parse::<usize>().unwrap();
-                                    element.direction = self.operation_fields.direction.clone();
-                                } else {
-                                    self.db.operations.push(Operation {
-                                        id: op_id,
-                                        date_time: chrono::NaiveDateTime::new(
-                                            self.operation_fields.date,
-                                            time,
-                                        ),
-                                        account_id: self.operation_fields.account_id,
-                                        operation_type: self
-                                            .operation_fields
-                                            .operation_type
-                                            .clone(),
-                                        direction: self.operation_fields.direction.clone(),
-                                        receipt: None,
-                                        summary: self
-                                            .operation_fields
-                                            .summary
-                                            .parse::<usize>()
-                                            .unwrap(),
-                                    });
-                                }
+                                    .find(|account| account.id == acc_id);
+                                // if let Some(element) = iter {
+                                //     element.account_type = self.account_fields.account_type.clone();
+                                //     element.name = self.account_fields.name.clone();
+                                //     element.number = self.account_fields.number.clone();
+                                //     element.bik = self.account_fields.bik.parse::<u32>().unwrap();
+                                // } else {
+                                //     self.db.accounts.push(Account {
+                                //         id: acc_id,
+                                //         name: self.account_fields.name.clone(),
+                                //         account_type: self.account_fields.account_type.clone(),
+                                //         number: self.account_fields.number.clone(),
+                                //         bik: self.account_fields.bik.parse::<u32>().unwrap(),
+                                //         sum: 0,
+                                //     });
+                                // }
                                 close_request = true;
                             }
                         });
@@ -673,16 +733,17 @@ impl eframe::App for App {
                         if ctx.input(|i| i.viewport().close_requested()) || close_request {
                             // Tell parent viewport that we should not show next frame:
                             // self.show_immediate_viewport = false;
-                            self.operation_fields = OperationFields::new();
+                            //
+                            self.account_fields = AccountFields::new();
                             self.statement = Statement::Common;
                         }
                     },
                 );
             }
+
             Statement::ThripleDialog => {
                 todo!()
             }
-            Statement::EditReceipt => todo!(),
         }
     }
 }
