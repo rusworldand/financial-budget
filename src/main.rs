@@ -1,7 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
 #![allow(rustdoc::missing_crate_level_docs)] // it's an example
 
-use chrono::{Date, DateTime, Local, NaiveDate, NaiveDateTime, NaiveTime, Utc};
+use chrono::{Date, DateTime, Local, NaiveDate, NaiveDateTime, NaiveTime, Timelike, Utc};
 use egui_extras::{Column, Size, StripBuilder, TableBuilder};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -68,7 +68,8 @@ impl AccountFields {
 
 struct OperationFields {
     date: NaiveDate,
-    time: NaiveTime,
+    hour: u32,
+    minute: u32,
     account_id: Uuid,
     operation_type: OperationType,
     summary: String,
@@ -80,7 +81,8 @@ impl OperationFields {
     fn new() -> Self {
         Self {
             date: chrono::Local::now().date_naive(),
-            time: chrono::Local::now().time(),
+            hour: 0,
+            minute: 0,
             account_id: Uuid::nil(),
             operation_type: OperationType::Initial,
             summary: "0".to_string(),
@@ -372,7 +374,8 @@ impl eframe::App for App {
                                     .unwrap();
 
                                 self.operation_fields.date = iter.date_time.date();
-                                self.operation_fields.time = iter.date_time.time();
+                                self.operation_fields.hour = iter.date_time.time().hour();
+                                self.operation_fields.minute = iter.date_time.time().minute();
                                 self.operation_fields.account_id = iter.account_id;
                                 self.operation_fields.operation_type = iter.operation_type.clone();
                                 self.operation_fields.summary = iter.summary.to_string();
@@ -510,7 +513,7 @@ impl eframe::App for App {
                 // let window2 = window.show(ctx, |ui| ui.label("text"));
             }
             Statement::EditOperation(uuid) => {
-                let acc_id = uuid.clone();
+                let op_id = uuid.clone();
                 ctx.show_viewport_immediate(
                     egui::ViewportId::from_hash_of("operation window"),
                     egui::ViewportBuilder::default()
@@ -529,7 +532,16 @@ impl eframe::App for App {
                             ui.add(egui_extras::DatePickerButton::new(
                                 &mut self.operation_fields.date,
                             ));
-                            ui.add(egui::DragValue::new(&mut my_f32).speed(1).range(0..=12));
+                            ui.add(
+                                egui::DragValue::new(&mut self.operation_fields.hour)
+                                    .speed(1)
+                                    .range(0..=23),
+                            );
+                            ui.add(
+                                egui::DragValue::new(&mut self.operation_fields.minute)
+                                    .speed(1)
+                                    .range(0..=59),
+                            );
 
                             ui.label("Account");
                             egui::ComboBox::from_label("Select account!")
@@ -587,7 +599,7 @@ impl eframe::App for App {
                             ));
 
                             ui.label("Direction");
-                            egui::ComboBox::from_label("Select type!")
+                            egui::ComboBox::from_label("Select direction!")
                                 .selected_text(format!("{:?}", self.operation_fields.direction))
                                 .show_ui(ui, |ui| {
                                     ui.selectable_value(
@@ -601,11 +613,61 @@ impl eframe::App for App {
                                         "Credit",
                                     );
                                 });
-                            // self.operation_fields.date_time = iter.date_time;
+                            // self.operation_fields.date = iter.date_time.date();
+                            // self.operation_fields.time = iter.date_time.time();
+                            // self.operation_fields.hour = self.operation_fields.time.hour();
+                            // self.operation_fields.minute = self.operation_fields.time.minute();
                             // self.operation_fields.account_id = iter.account_id;
                             // self.operation_fields.operation_type = iter.operation_type.clone();
-                            // self.operation_fields.summary = iter.summary;
+                            // self.operation_fields.summary = iter.summary.to_string();
                             // self.operation_fields.direction = iter.direction.clone();
+
+                            if ui.button("Apply").clicked() {
+                                let iter = self
+                                    .db
+                                    .operations
+                                    .iter_mut()
+                                    .find(|operation| operation.id == op_id);
+                                let time = chrono::NaiveTime::from_hms_opt(
+                                    self.operation_fields.hour,
+                                    self.operation_fields.minute,
+                                    0,
+                                )
+                                .unwrap();
+                                if let Some(element) = iter {
+                                    element.date_time = chrono::NaiveDateTime::new(
+                                        self.operation_fields.date,
+                                        time,
+                                    );
+                                    element.account_id = self.operation_fields.account_id;
+                                    element.operation_type =
+                                        self.operation_fields.operation_type.clone();
+                                    element.summary =
+                                        self.operation_fields.summary.parse::<usize>().unwrap();
+                                    element.direction = self.operation_fields.direction.clone();
+                                } else {
+                                    self.db.operations.push(Operation {
+                                        id: op_id,
+                                        date_time: chrono::NaiveDateTime::new(
+                                            self.operation_fields.date,
+                                            time,
+                                        ),
+                                        account_id: self.operation_fields.account_id,
+                                        operation_type: self
+                                            .operation_fields
+                                            .operation_type
+                                            .clone(),
+                                        direction: self.operation_fields.direction.clone(),
+                                        receipt: None,
+                                        summary: self
+                                            .operation_fields
+                                            .summary
+                                            .parse::<usize>()
+                                            .unwrap(),
+                                    });
+                                }
+                                close_request = true;
+                            }
                         });
 
                         if ctx.input(|i| i.viewport().close_requested()) || close_request {
