@@ -26,7 +26,8 @@ impl Database {
 
     pub fn save(&self, filename: &str) {
         let buffer = File::create(filename).unwrap();
-        let j = serde_json::to_writer_pretty(buffer, self).unwrap();
+        serde_json::to_writer_pretty(buffer, self).unwrap();
+        //let j =
     }
 
     pub fn new() -> Self {

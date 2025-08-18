@@ -1,9 +1,10 @@
 use chrono::NaiveDateTime;
+use rust_decimal::{self, Decimal};
 use serde::{Deserialize, Serialize};
 
 //Признак рассчёта - тип чека
 #[derive(Default, Serialize, Deserialize, Debug)]
-enum CalculationType {
+pub enum CalculationType {
     #[default]
     Inbound, // Чек прихода
     Outbound,       // Чек расхода
@@ -12,7 +13,7 @@ enum CalculationType {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-enum VatType {
+pub enum VatType {
     Vat20,
     Vat10,
     Vat7,
@@ -21,7 +22,7 @@ enum VatType {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-enum UnitType {
+pub enum UnitType {
     Pieces,
     Gramm,
     Kilogamm,
@@ -50,7 +51,7 @@ enum UnitType {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-enum CashlessOpType {
+pub enum CashlessOpType {
     Payment,
     Cansel,
     Return,
@@ -68,10 +69,10 @@ pub struct Subject {
     name: String,        // Найменование
     unit_type: UnitType, // Тип количества
     count: usize,        // Количество
-    price: usize,        // Цена
-    summary: usize,      // Сумма
+    price: Decimal,      // Цена
+    summary: Decimal,    // Сумма
     vat_type: VatType,   // Тип НДС
-    vat: usize,          // НДС
+    vat: Decimal,        // НДС
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -103,19 +104,19 @@ pub struct Receipt {
     /// Предмет рассчёта - позиции в документе
     subjects: Vec<Subject>,
     /// Сумма
-    summary: usize,
+    summary: Decimal,
     /// Нал
-    cash: Option<usize>,
+    cash: Option<Decimal>,
     /// Безнал
-    cashless: Option<usize>,
+    cashless: Option<Decimal>,
     /// Аванс
-    prepayment: Option<usize>,
+    prepayment: Option<Decimal>,
     /// Кредит
-    postpayment: Option<usize>,
+    postpayment: Option<Decimal>,
     /// За счёт з/п
-    in_kind: Option<usize>,
+    in_kind: Option<Decimal>,
     /// Сумма НДС
-    vat: Option<usize>,
+    vat: Option<Decimal>,
     /// Ссылка на чек
     url: Option<String>,
     /// Слип-чек
@@ -123,7 +124,7 @@ pub struct Receipt {
 }
 
 impl Receipt {
-    pub fn short_new(summary: usize) -> Self {
+    pub fn short_new(summary: Decimal) -> Self {
         Self {
             summary,
             ..Default::default()

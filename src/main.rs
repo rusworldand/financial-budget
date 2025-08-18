@@ -3,7 +3,7 @@
 
 use chrono::{Date, DateTime, Local, NaiveDate, NaiveDateTime, NaiveTime, Timelike, Utc};
 use egui_extras::{Column, Size, StripBuilder, TableBuilder};
-use serde::{Deserialize, Serialize};
+use rust_decimal::{self, Decimal, dec};
 use uuid::Uuid;
 
 use crate::{
@@ -12,7 +12,7 @@ use crate::{
     operation::{FinanseDirection, Operation, OperationType},
 };
 
-use eframe::egui::{self, Button, Response, Ui, response};
+use eframe::egui::{self, Response, Ui};
 
 mod account;
 mod database;
@@ -55,17 +55,6 @@ impl AccountFields {
     }
 }
 
-// id: Uuid::new_v4(),
-// date_time: match date_time {
-//     Some(_) => date_time.expect("Empty"),
-//     None => Local::now().naive_local(),
-// },
-// account_id: account_id,
-// operation_type: operation_type,
-// summary: summary,
-// direction: direction,
-// receipt: receipt,
-
 struct OperationFields {
     date: NaiveDate,
     hour: u32,
@@ -88,6 +77,46 @@ impl OperationFields {
             summary: "0".to_string(),
             direction: FinanseDirection::Credit,
             receipt: Uuid::nil(),
+        }
+    }
+}
+
+struct Receipt {
+    date: NaiveDate,
+    hour: u32,
+    minute: u32,
+    calculation_type: receipt::CalculationType,
+    address: String,
+    place: String,
+    subjects: Vec<receipt::Subject>,
+    summary: Decimal,
+    cash: Option<Decimal>,
+    cashless: Option<Decimal>,
+    prepayment: Option<Decimal>,
+    postpayment: Option<Decimal>,
+    in_kind: Option<Decimal>,
+    vat: Option<Decimal>,
+    url: Option<String>,
+}
+
+impl Receipt {
+    fn new() -> Self {
+        Self {
+            date: chrono::Local::now().date_naive(),
+            hour: 0,
+            minute: 0,
+            calculation_type: receipt::CalculationType::Inbound,
+            address: "".to_string(),
+            place: "".to_string(),
+            subjects: Vec::new(),
+            summary: dec!(0),
+            cash: None,
+            cashless: None,
+            prepayment: None,
+            postpayment: None,
+            in_kind: None,
+            vat: None,
+            url: None,
         }
     }
 }
@@ -688,7 +717,9 @@ impl eframe::App for App {
             }
 
             Statement::EditReceipt(uuid, op_uuid, signal) => {
-                let acc_id = uuid.clone();
+                let rec_id = uuid.clone();
+                let op_id = op_uuid.clone();
+                let signal = signal.clone();
                 ctx.show_viewport_immediate(
                     egui::ViewportId::from_hash_of("account window"),
                     egui::ViewportBuilder::default()
@@ -704,13 +735,60 @@ impl eframe::App for App {
 
                         egui::CentralPanel::default().show(ctx, |ui| {
                             ui.label("Name");
+                            StripBuilder::new(ui)
+                                .size(Size::exact(200.0))
+                                .vertical(|mut strip| {
+                                    strip.cell(|ui| {
+                                        let mut table = TableBuilder::new(ui)
+                                            .resizable(true)
+                                            .striped(true)
+                                            .id_salt("subject_table")
+                                            .cell_layout(egui::Layout::left_to_right(
+                                                egui::Align::Center,
+                                            ))
+                                            .column(Column::auto())
+                                            .column(Column::auto())
+                                            .column(Column::auto())
+                                            .column(Column::auto())
+                                            .column(Column::auto())
+                                            .column(Column::auto())
+                                            .column(Column::auto())
+                                            .min_scrolled_height(0.0)
+                                            .max_scroll_height(500.0)
+                                            .sense(egui::Sense::click());
+                                        table.header(30.0, |mut header| {
+                                            header.col(|ui| {
+                                                ui.strong("Name");
+                                            });
+                                            header.col(|ui| {
+                                                ui.strong("Count");
+                                            });
+                                            header.col(|ui| {
+                                                ui.strong("Count Type");
+                                            });
+                                            header.col(|ui| {
+                                                ui.strong("Price");
+                                            });
+                                            header.col(|ui| {
+                                                ui.strong("Summ");
+                                            });
+                                            header.col(|ui| {
+                                                ui.strong("Vat type");
+                                            });
+                                            header.col(|ui| {
+                                                ui.strong("Vat");
+                                            });
+                                        });
+                                        table.body(|mut body| {});
+                                    });
+                                });
 
                             if ui.button("Apply").clicked() {
-                                let iter = self
-                                    .db
-                                    .accounts
-                                    .iter_mut()
-                                    .find(|account| account.id == acc_id);
+                                // let iter = self
+                                //     .db
+                                //     .accounts
+                                //     .iter_mut()
+                                //     .find(|account| account.id == acc_id);
                                 // if let Some(element) = iter {
                                 //     element.account_type = self.account_fields.account_type.clone();
                                 //     element.name = self.account_fields.name.clone();
@@ -735,7 +813,7 @@ impl eframe::App for App {
                             // self.show_immediate_viewport = false;
                             //
                             self.account_fields = AccountFields::new();
-                            self.statement = Statement::Common;
+                            self.statement = Statement::EditOperation(op_id, signal);
                         }
                     },
                 );
