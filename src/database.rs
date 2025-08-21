@@ -1,12 +1,13 @@
-use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 use std::fs::File;
-use std::io::{BufReader, BufWriter, Write};
-use uuid::Uuid;
+use std::io::BufReader;
+// use std::io::{BufReader, BufWriter, Write};
 
 use crate::account::*;
 use crate::operation::*;
 use crate::receipt::*;
+
+const VERSION: &str = "0.0.1";
 
 #[derive(Serialize, Deserialize)]
 pub struct Database {
@@ -27,55 +28,14 @@ impl Database {
     pub fn save(&self, filename: &str) {
         let buffer = File::create(filename).unwrap();
         serde_json::to_writer_pretty(buffer, self).unwrap();
-        //let j =
     }
 
     pub fn new() -> Self {
         Self {
-            db_version: "0.0.1".to_string(),
+            db_version: VERSION.to_string(),
             accounts: Vec::new(),
             operations: Vec::new(),
             receipts: Vec::new(),
         }
     }
-
-    pub fn add_account(
-        &mut self,
-        name: String,
-        account_type: AccountType,
-        number: String,
-        bik: u32,
-    ) {
-        self.accounts
-            .push(Account::new(name, account_type, number, bik));
-    }
-
-    pub fn add_operations(
-        &mut self,
-        account: Uuid,
-        date_time: Option<NaiveDateTime>,
-        operation_type: OperationType,
-        summary: usize,
-        direction: FinanseDirection,
-        receipt: Option<Uuid>,
-    ) {
-        if !self.accounts.iter().any(|item| item.id == account) {
-            panic!("Account doesn't exist!");
-        }
-        self.operations.push(Operation::new(
-            account,
-            date_time,
-            operation_type,
-            summary,
-            direction,
-            receipt,
-        ))
-    }
 }
-
-// account_id: Uuid,
-// date_time: Option<NaiveDateTime>,
-// operation_type: OperationType,
-// summary: usize,
-// direction: Direction,
-// receipt: Option<receipt::Receipt>,

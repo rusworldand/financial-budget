@@ -1,6 +1,7 @@
 use chrono::NaiveDateTime;
 use rust_decimal::{self, Decimal};
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 //Признак рассчёта - тип чека
 #[derive(Default, Serialize, Deserialize, Debug)]
@@ -12,7 +13,7 @@ pub enum CalculationType {
     OutboundReturn, // Возврат расхода
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub enum VatType {
     Vat20,
     Vat10,
@@ -21,7 +22,7 @@ pub enum VatType {
     Vat0,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub enum UnitType {
     Pieces,
     Gramm,
@@ -58,7 +59,7 @@ pub enum CashlessOpType {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-enum Currency {
+pub enum Currency {
     Rub,
     Usd,
 }
@@ -66,68 +67,70 @@ enum Currency {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Subject {
-    name: String,        // Найменование
-    unit_type: UnitType, // Тип количества
-    count: usize,        // Количество
-    price: Decimal,      // Цена
-    summary: Decimal,    // Сумма
-    vat_type: VatType,   // Тип НДС
-    vat: Decimal,        // НДС
+    pub name: String,        // Найменование
+    pub unit_type: UnitType, // Тип количества
+    pub count: usize,        // Количество
+    pub price: Decimal,      // Цена
+    pub summary: Decimal,    // Сумма
+    pub vat_type: VatType,   // Тип НДС
+    pub vat: Decimal,        // НДС
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Slip {
-    id: usize,                      //Номер терминала
-    op_type: CashlessOpType,        // Тип операции
-    date_time: NaiveDateTime,       // Дата - время
-    summary: usize,                 // Сумма
-    currency: Currency,             // Валюта
-    comm_summary: Option<usize>,    // Сумма комиссионного вознаграждения
-    auth_code: String,              // Код авторизации
-    card: String,                   // Номер карты
-    address: Option<String>,        // Адрес
-    place: Option<String>,          // Наименование магазина
-    payment_system: Option<String>, // Платёжная система
-    doc_id: Option<usize>,          // Номер документа
+    pub id: usize,                      //Номер терминала
+    pub op_type: CashlessOpType,        // Тип операции
+    pub date_time: NaiveDateTime,       // Дата - время
+    pub summary: usize,                 // Сумма
+    pub currency: Currency,             // Валюта
+    pub comm_summary: Option<usize>,    // Сумма комиссионного вознаграждения
+    pub auth_code: String,              // Код авторизации
+    pub card: String,                   // Номер карты
+    pub address: Option<String>,        // Адрес
+    pub place: Option<String>,          // Наименование магазина
+    pub payment_system: Option<String>, // Платёжная система
+    pub doc_id: Option<usize>,          // Номер документа
 }
 
 #[derive(Default, Serialize, Deserialize, Debug)]
 pub struct Receipt {
+    /// Идентификатор
+    pub id: Uuid,
     /// Дата время
-    date_time: NaiveDateTime,
+    pub date_time: NaiveDateTime,
     /// Признак рассчёта - тип чека
-    calculation_type: CalculationType,
+    pub calculation_type: CalculationType,
     /// Адрес
-    address: Option<String>,
+    pub address: Option<String>,
     /// Место - Название учреждения
-    place: Option<String>,
+    pub place: Option<String>,
     /// Предмет рассчёта - позиции в документе
-    subjects: Vec<Subject>,
+    pub subjects: Vec<Subject>,
     /// Сумма
-    summary: Decimal,
+    pub summary: Decimal,
     /// Нал
-    cash: Option<Decimal>,
+    pub cash: Option<Decimal>,
     /// Безнал
-    cashless: Option<Decimal>,
+    pub cashless: Option<Decimal>,
     /// Аванс
-    prepayment: Option<Decimal>,
+    pub prepayment: Option<Decimal>,
     /// Кредит
-    postpayment: Option<Decimal>,
+    pub postpayment: Option<Decimal>,
     /// За счёт з/п
-    in_kind: Option<Decimal>,
+    pub in_kind: Option<Decimal>,
     /// Сумма НДС
-    vat: Option<Decimal>,
+    pub vat: Option<Decimal>,
     /// Ссылка на чек
-    url: Option<String>,
+    pub url: Option<String>,
     /// Слип-чек
-    slip: Option<Slip>,
+    pub slip: Option<Slip>,
 }
 
-impl Receipt {
-    pub fn short_new(summary: Decimal) -> Self {
-        Self {
-            summary,
-            ..Default::default()
-        }
-    }
-}
+// impl Receipt {
+//     pub fn short_new(summary: Decimal) -> Self {
+//         Self {
+//             summary,
+//             ..Default::default()
+//         }
+//     }
+// }

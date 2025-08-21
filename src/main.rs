@@ -1,6 +1,8 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
 #![allow(rustdoc::missing_crate_level_docs)] // it's an example
 
+use std::env;
+
 use chrono::{Date, DateTime, Local, NaiveDate, NaiveDateTime, NaiveTime, Timelike, Utc};
 use egui_extras::{Column, Size, StripBuilder, TableBuilder};
 use rust_decimal::{self, Decimal, dec};
@@ -63,7 +65,7 @@ struct OperationFields {
     operation_type: OperationType,
     summary: String,
     direction: FinanseDirection,
-    receipt: Uuid,
+    receipt: Option<Uuid>,
 }
 
 impl OperationFields {
@@ -76,12 +78,13 @@ impl OperationFields {
             operation_type: OperationType::Initial,
             summary: "0".to_string(),
             direction: FinanseDirection::Credit,
-            receipt: Uuid::nil(),
+            receipt: None,
         }
     }
 }
 
-struct Receipt {
+struct ReceiptFields {
+    id: Uuid,
     date: NaiveDate,
     hour: u32,
     minute: u32,
@@ -99,9 +102,10 @@ struct Receipt {
     url: Option<String>,
 }
 
-impl Receipt {
+impl ReceiptFields {
     fn new() -> Self {
         Self {
+            id: Uuid::nil(),
             date: chrono::Local::now().date_naive(),
             hour: 0,
             minute: 0,
@@ -122,6 +126,7 @@ impl Receipt {
 }
 
 fn main() -> eframe::Result {
+    let args: Vec<String> = env::args().collect();
     env_logger::init(); // Log to stderr (if you run with `RUST_LOG=debug`).
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default().with_inner_size([720.0, 480.0]),
@@ -134,7 +139,7 @@ fn main() -> eframe::Result {
             // This gives us image support:
             //egui_extras::install_image_loaders(&cc.egui_ctx);
 
-            let app = App::new();
+            let app = App::new(args.get(1));
             Ok(Box::new(app))
         }),
     )
@@ -142,20 +147,36 @@ fn main() -> eframe::Result {
 
 struct App {
     db: Database,
+    file: String,
     selected: Option<Selection>,
     statement: Statement,
     account_fields: AccountFields,
     operation_fields: OperationFields,
+    receipt_fields: ReceiptFields,
 }
 
 impl App {
-    fn new() -> Self {
-        Self {
-            db: Database::load("/home/user/rust_projects/file.json".to_string()),
-            selected: None,
-            statement: Statement::Common,
-            account_fields: AccountFields::new(),
-            operation_fields: OperationFields::new(),
+    fn new(arg: Option<&String>) -> Self {
+        if let Some(arg) = arg {
+            Self {
+                db: Database::load(arg.clone()),
+                file: arg.clone(),
+                selected: None,
+                statement: Statement::Common,
+                account_fields: AccountFields::new(),
+                operation_fields: OperationFields::new(),
+                receipt_fields: ReceiptFields::new(),
+            }
+        } else {
+            Self {
+                db: Database::new(),
+                file: "".to_string(),
+                selected: None,
+                statement: Statement::Common,
+                account_fields: AccountFields::new(),
+                operation_fields: OperationFields::new(),
+                receipt_fields: ReceiptFields::new(),
+            }
         }
     }
     fn response_compare(variable: Response, temp_response: &mut Option<Response>) {
@@ -345,8 +366,8 @@ impl eframe::App for App {
                 ui.vertical_centered(|ui| {
                     if let Some(selection) = &self.selected {
                         match selection {
-                            Selection::Account(uuid) => ui.heading("Аккаунт"),
-                            Selection::Operation(uuid) => ui.heading("Операция"),
+                            Selection::Account(_) => ui.heading("Аккаунт"),
+                            Selection::Operation(_) => ui.heading("Операция"),
                         }
                     } else {
                         ui.heading("Элемент")
@@ -721,9 +742,9 @@ impl eframe::App for App {
                 let op_id = op_uuid.clone();
                 let signal = signal.clone();
                 ctx.show_viewport_immediate(
-                    egui::ViewportId::from_hash_of("account window"),
+                    egui::ViewportId::from_hash_of("receipt window"),
                     egui::ViewportBuilder::default()
-                        .with_title("Account")
+                        .with_title("Receipt")
                         .with_inner_size([400.0, 200.0]),
                     |ctx, class| {
                         assert!(
@@ -753,42 +774,196 @@ impl eframe::App for App {
                                             .column(Column::auto())
                                             .column(Column::auto())
                                             .column(Column::auto())
+                                            .column(Column::auto())
                                             .min_scrolled_height(0.0)
                                             .max_scroll_height(500.0)
                                             .sense(egui::Sense::click());
-                                        table.header(30.0, |mut header| {
-                                            header.col(|ui| {
-                                                ui.strong("Name");
+                                        table
+                                            .header(30.0, |mut header| {
+                                                header.col(|ui| {
+                                                    ui.strong("N");
+                                                });
+                                                header.col(|ui| {
+                                                    ui.strong("Name");
+                                                });
+                                                header.col(|ui| {
+                                                    ui.strong("Count");
+                                                });
+                                                header.col(|ui| {
+                                                    ui.strong("Count Type");
+                                                });
+                                                header.col(|ui| {
+                                                    ui.strong("Price");
+                                                });
+                                                header.col(|ui| {
+                                                    ui.strong("Summ");
+                                                });
+                                                header.col(|ui| {
+                                                    ui.strong("Vat type");
+                                                });
+                                                header.col(|ui| {
+                                                    ui.strong("Vat");
+                                                });
+                                            })
+                                            .body(|mut body| {
+                                                // let contents =
+                                                //     |ui: &mut eframe::egui::Ui,
+                                                //      text: String,
+                                                //      response: &mut Option<Response>| {
+                                                //         App::response_compare(ui.label(text), response);
+                                                //     };
+                                                for i in 0..self.receipt_fields.subjects.len() {
+                                                    body.row(30.0, |mut row| {
+                                                        //let mut inner_response: Option<Response> = None;
+                                                        row.col(|ui| {
+                                                            ui.label(format!("'{}'", i));
+                                                        });
+
+                                                        row.col(|ui| {
+                                                            ui.add(egui::TextEdit::singleline(
+                                                                &mut self.receipt_fields.subjects
+                                                                    [i]
+                                                                    .name,
+                                                            ));
+                                                        });
+
+                                                        row.col(|ui| {
+                                                            ui.add(egui::TextEdit::singleline(
+                                                                &mut self.receipt_fields.subjects
+                                                                    [i]
+                                                                    .count
+                                                                    .to_string(),
+                                                            ));
+                                                        });
+
+                                                        row.col(|ui| {
+                                                            egui::ComboBox::from_label(
+                                                                "Select unit type!",
+                                                            )
+                                                            .selected_text(format!(
+                                                                "{:?}",
+                                                                self.receipt_fields.subjects[i]
+                                                                    .unit_type
+                                                            ))
+                                                            .show_ui(ui, |ui| {
+                                                                ui.selectable_value(
+                                                                    &mut self
+                                                                        .receipt_fields
+                                                                        .subjects[i]
+                                                                        .unit_type,
+                                                                    receipt::UnitType::Pieces,
+                                                                    "Pieces",
+                                                                );
+                                                                ui.selectable_value(
+                                                                    &mut self
+                                                                        .receipt_fields
+                                                                        .subjects[i]
+                                                                        .unit_type,
+                                                                    receipt::UnitType::Gramm,
+                                                                    "Gramm",
+                                                                );
+                                                                ui.selectable_value(
+                                                                    &mut self
+                                                                        .receipt_fields
+                                                                        .subjects[i]
+                                                                        .unit_type,
+                                                                    receipt::UnitType::Kilogamm,
+                                                                    "Kilogamm",
+                                                                );
+                                                            });
+                                                        });
+
+                                                        row.col(|ui| {
+                                                            ui.add(egui::TextEdit::singleline(
+                                                                &mut self.receipt_fields.subjects
+                                                                    [i]
+                                                                    .price
+                                                                    .to_string(),
+                                                            ));
+                                                        });
+
+                                                        row.col(|ui| {
+                                                            ui.add(egui::TextEdit::singleline(
+                                                                &mut self.receipt_fields.subjects
+                                                                    [i]
+                                                                    .summary
+                                                                    .to_string(),
+                                                            ));
+                                                        });
+
+                                                        row.col(|ui| {
+                                                            egui::ComboBox::from_label(
+                                                                "Select Vat type!",
+                                                            )
+                                                            .selected_text(format!(
+                                                                "{:?}",
+                                                                self.receipt_fields.subjects[i]
+                                                                    .vat_type
+                                                            ))
+                                                            .show_ui(ui, |ui| {
+                                                                ui.selectable_value(
+                                                                    &mut self
+                                                                        .receipt_fields
+                                                                        .subjects[i]
+                                                                        .vat_type,
+                                                                    receipt::VatType::Vat0,
+                                                                    "Initial",
+                                                                );
+                                                                ui.selectable_value(
+                                                                    &mut self
+                                                                        .receipt_fields
+                                                                        .subjects[i]
+                                                                        .vat_type,
+                                                                    receipt::VatType::Vat5,
+                                                                    "Buy",
+                                                                );
+                                                                ui.selectable_value(
+                                                                    &mut self
+                                                                        .receipt_fields
+                                                                        .subjects[i]
+                                                                        .vat_type,
+                                                                    receipt::VatType::Vat7,
+                                                                    "Sell",
+                                                                );
+                                                                ui.selectable_value(
+                                                                    &mut self
+                                                                        .receipt_fields
+                                                                        .subjects[i]
+                                                                        .vat_type,
+                                                                    receipt::VatType::Vat10,
+                                                                    "Debeting Accounts",
+                                                                );
+                                                                ui.selectable_value(
+                                                                    &mut self
+                                                                        .receipt_fields
+                                                                        .subjects[i]
+                                                                        .vat_type,
+                                                                    receipt::VatType::Vat20,
+                                                                    "Withdrawal From Account",
+                                                                );
+                                                            });
+                                                        });
+
+                                                        row.col(|ui| {
+                                                            ui.add(egui::TextEdit::singleline(
+                                                                &mut self.receipt_fields.subjects
+                                                                    [i]
+                                                                    .vat
+                                                                    .to_string(),
+                                                            ));
+                                                        });
+                                                    });
+                                                }
                                             });
-                                            header.col(|ui| {
-                                                ui.strong("Count");
-                                            });
-                                            header.col(|ui| {
-                                                ui.strong("Count Type");
-                                            });
-                                            header.col(|ui| {
-                                                ui.strong("Price");
-                                            });
-                                            header.col(|ui| {
-                                                ui.strong("Summ");
-                                            });
-                                            header.col(|ui| {
-                                                ui.strong("Vat type");
-                                            });
-                                            header.col(|ui| {
-                                                ui.strong("Vat");
-                                            });
-                                        });
-                                        table.body(|mut body| {});
                                     });
                                 });
 
                             if ui.button("Apply").clicked() {
-                                // let iter = self
-                                //     .db
-                                //     .accounts
-                                //     .iter_mut()
-                                //     .find(|account| account.id == acc_id);
+                                let iter = self
+                                    .db
+                                    .receipts
+                                    .iter_mut()
+                                    .find(|receipt| receipt.id == rec_id);
                                 // if let Some(element) = iter {
                                 //     element.account_type = self.account_fields.account_type.clone();
                                 //     element.name = self.account_fields.name.clone();

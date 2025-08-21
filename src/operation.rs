@@ -1,9 +1,6 @@
-use chrono::Local;
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-
-use crate::receipt;
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub enum OperationType {
@@ -32,29 +29,29 @@ pub struct Operation {
     pub receipt_id: Option<Uuid>, // conduction: bool,
 }
 
-impl Operation {
-    pub fn new(
-        account_id: Uuid,
-        date_time: Option<NaiveDateTime>,
-        operation_type: OperationType,
-        summary: usize,
-        direction: FinanseDirection,
-        receipt: Option<Uuid>,
-    ) -> Self {
-        Self {
-            id: Uuid::new_v4(),
-            date_time: match date_time {
-                Some(_) => date_time.expect("Empty"),
-                None => Local::now().naive_local(),
-            },
-            account_id: account_id,
-            operation_type: operation_type,
-            summary: summary,
-            direction: direction,
-            receipt_id: receipt,
-        }
-    }
-}
+// impl Operation {
+//     pub fn new(
+//         account_id: Uuid,
+//         date_time: Option<NaiveDateTime>,
+//         operation_type: OperationType,
+//         summary: usize,
+//         direction: FinanseDirection,
+//         receipt: Option<Uuid>,
+//     ) -> Self {
+//         Self {
+//             id: Uuid::new_v4(),
+//             date_time: match date_time {
+//                 Some(_) => date_time.expect("Empty"),
+//                 None => Local::now().naive_local(),
+//             },
+//             account_id: account_id,
+//             operation_type: operation_type,
+//             summary: summary,
+//             direction: direction,
+//             receipt_id: receipt,
+//         }
+//     }
+// }
 
 // pub fn new(
 //     date_time: NaiveDateTime,

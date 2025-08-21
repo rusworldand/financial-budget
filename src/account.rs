@@ -22,15 +22,15 @@ pub struct Account {
     pub sum: usize,
 }
 
-impl Account {
-    pub fn new(name: String, account_type: AccountType, number: String, bik: u32) -> Self {
-        Self {
-            id: Uuid::new_v4(),
-            name: name,
-            account_type: account_type,
-            number: number,
-            bik: bik,
-            sum: 0,
-        }
-    }
-}
+// impl Account {
+//     pub fn new(name: String, account_type: AccountType, number: String, bik: u32) -> Self {
+//         Self {
+//             id: Uuid::new_v4(),
+//             name: name,
+//             account_type: account_type,
+//             number: number,
+//             bik: bik,
+//             sum: 0,
+//         }
+//     }
+// }
