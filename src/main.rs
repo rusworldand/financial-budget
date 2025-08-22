@@ -1,7 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
 #![allow(rustdoc::missing_crate_level_docs)] // it's an example
 
-use std::env;
+use std::{env, ops::Deref};
 
 use chrono::{Date, DateTime, Local, NaiveDate, NaiveDateTime, NaiveTime, Timelike, Utc};
 use egui_extras::{Column, Size, StripBuilder, TableBuilder};
@@ -12,6 +12,7 @@ use crate::{
     account::Account,
     database::Database,
     operation::{FinanseDirection, Operation, OperationType},
+    receipt::{Receipt, VatType},
 };
 
 use eframe::egui::{self, Response, Ui};
@@ -34,7 +35,7 @@ enum TableType {
 enum Statement {
     Common,
     EditAccount(Uuid),
-    EditOperation(Uuid, bool),
+    EditOperation(Uuid),
     EditReceipt(Uuid, Uuid, bool),
     ThripleDialog,
 }
@@ -84,7 +85,6 @@ impl OperationFields {
 }
 
 struct ReceiptFields {
-    id: Uuid,
     date: NaiveDate,
     hour: u32,
     minute: u32,
@@ -92,20 +92,19 @@ struct ReceiptFields {
     address: String,
     place: String,
     subjects: Vec<receipt::Subject>,
-    summary: Decimal,
-    cash: Option<Decimal>,
-    cashless: Option<Decimal>,
-    prepayment: Option<Decimal>,
-    postpayment: Option<Decimal>,
-    in_kind: Option<Decimal>,
-    vat: Option<Decimal>,
-    url: Option<String>,
+    summary: String,
+    cash: String,
+    cashless: String,
+    prepayment: String,
+    postpayment: String,
+    in_kind: String,
+    vat: String,
+    url: String,
 }
 
 impl ReceiptFields {
     fn new() -> Self {
         Self {
-            id: Uuid::nil(),
             date: chrono::Local::now().date_naive(),
             hour: 0,
             minute: 0,
@@ -113,14 +112,14 @@ impl ReceiptFields {
             address: "".to_string(),
             place: "".to_string(),
             subjects: Vec::new(),
-            summary: dec!(0),
-            cash: None,
-            cashless: None,
-            prepayment: None,
-            postpayment: None,
-            in_kind: None,
-            vat: None,
-            url: None,
+            summary: "".to_string(),
+            cash: "".to_string(),
+            cashless: "".to_string(),
+            prepayment: "".to_string(),
+            postpayment: "".to_string(),
+            in_kind: "".to_string(),
+            vat: "".to_string(),
+            url: "".to_string(),
         }
     }
 }
@@ -430,7 +429,7 @@ impl eframe::App for App {
                                 self.operation_fields.operation_type = iter.operation_type.clone();
                                 self.operation_fields.summary = iter.summary.to_string();
                                 self.operation_fields.direction = iter.direction.clone();
-                                self.statement = Statement::EditOperation(*uuid, false);
+                                self.statement = Statement::EditOperation(*uuid);
                             }
                         }
                     }
@@ -445,7 +444,7 @@ impl eframe::App for App {
                     self.account_fields = AccountFields::new();
                 }
                 if ui.button("New Operation").clicked() {
-                    self.statement = Statement::EditOperation(Uuid::new_v4(), false);
+                    self.statement = Statement::EditOperation(Uuid::new_v4());
                 }
                 if ui.button("Save").clicked() {
                     self.db.save("/home/user/rust_projects/file.json");
@@ -562,179 +561,202 @@ impl eframe::App for App {
                 // let window = eframe::egui::Window::new("New Account");
                 // let window2 = window.show(ctx, |ui| ui.label("text"));
             }
-            Statement::EditOperation(uuid, signal) => {
-                if !*signal {
-                    let op_id = uuid.clone();
-                    ctx.show_viewport_immediate(
-                        egui::ViewportId::from_hash_of("operation window"),
-                        egui::ViewportBuilder::default()
-                            .with_title("Operation")
-                            .with_inner_size([400.0, 400.0]),
-                        |ctx, class| {
-                            assert!(
-                                class == egui::ViewportClass::Immediate,
-                                "This egui backend doesn't support multiple viewports"
+            Statement::EditOperation(uuid) => {
+                let op_id = uuid.clone();
+                ctx.show_viewport_immediate(
+                    egui::ViewportId::from_hash_of("operation window"),
+                    egui::ViewportBuilder::default()
+                        .with_title("Operation")
+                        .with_inner_size([400.0, 400.0]),
+                    |ctx, class| {
+                        assert!(
+                            class == egui::ViewportClass::Immediate,
+                            "This egui backend doesn't support multiple viewports"
+                        );
+
+                        let mut close_request: bool = false;
+
+                        egui::CentralPanel::default().show(ctx, |ui| {
+                            ui.label("Date and time");
+                            ui.add(egui_extras::DatePickerButton::new(
+                                &mut self.operation_fields.date,
+                            ));
+                            ui.add(
+                                egui::DragValue::new(&mut self.operation_fields.hour)
+                                    .speed(1)
+                                    .range(0..=23),
+                            );
+                            ui.add(
+                                egui::DragValue::new(&mut self.operation_fields.minute)
+                                    .speed(1)
+                                    .range(0..=59),
                             );
 
-                            let mut close_request: bool = false;
+                            ui.label("Account");
+                            egui::ComboBox::from_label("Select account!")
+                                .selected_text(format!("{:?}", self.operation_fields.account_id))
+                                .show_ui(ui, |ui| {
+                                    for element in self.db.accounts.iter() {
+                                        ui.selectable_value(
+                                            &mut self.operation_fields.account_id,
+                                            element.id,
+                                            format!("{}", element.name),
+                                        );
+                                    }
+                                });
+                            ui.label("Operation type");
+                            egui::ComboBox::from_label("Select type!")
+                                .selected_text(format!(
+                                    "{:?}",
+                                    self.operation_fields.operation_type
+                                ))
+                                .show_ui(ui, |ui| {
+                                    ui.selectable_value(
+                                        &mut self.operation_fields.operation_type,
+                                        operation::OperationType::Initial,
+                                        "Initial",
+                                    );
+                                    ui.selectable_value(
+                                        &mut self.operation_fields.operation_type,
+                                        operation::OperationType::Buy,
+                                        "Buy",
+                                    );
+                                    ui.selectable_value(
+                                        &mut self.operation_fields.operation_type,
+                                        operation::OperationType::Sell,
+                                        "Sell",
+                                    );
+                                    ui.selectable_value(
+                                        &mut self.operation_fields.operation_type,
+                                        operation::OperationType::ReturnBuy,
+                                        "Return Buy",
+                                    );
+                                    ui.selectable_value(
+                                        &mut self.operation_fields.operation_type,
+                                        operation::OperationType::ReturnSell,
+                                        "Return Sell",
+                                    );
+                                    ui.selectable_value(
+                                        &mut self.operation_fields.operation_type,
+                                        operation::OperationType::DebetingAccounts,
+                                        "Debeting Accounts",
+                                    );
+                                    ui.selectable_value(
+                                        &mut self.operation_fields.operation_type,
+                                        operation::OperationType::WithdrawalFromAccounts,
+                                        "Withdrawal From Account",
+                                    );
+                                    ui.selectable_value(
+                                        &mut self.operation_fields.operation_type,
+                                        operation::OperationType::ClosingAccounts,
+                                        "Closing Account",
+                                    );
+                                });
+                            ui.label("Summ");
+                            ui.add(egui::TextEdit::singleline(
+                                &mut self.operation_fields.summary,
+                            ));
 
-                            egui::CentralPanel::default().show(ctx, |ui| {
-                                ui.label("Date and time");
-                                ui.add(egui_extras::DatePickerButton::new(
-                                    &mut self.operation_fields.date,
-                                ));
-                                ui.add(
-                                    egui::DragValue::new(&mut self.operation_fields.hour)
-                                        .speed(1)
-                                        .range(0..=23),
-                                );
-                                ui.add(
-                                    egui::DragValue::new(&mut self.operation_fields.minute)
-                                        .speed(1)
-                                        .range(0..=59),
-                                );
+                            ui.label("Direction");
+                            egui::ComboBox::from_label("Select direction!")
+                                .selected_text(format!("{:?}", self.operation_fields.direction))
+                                .show_ui(ui, |ui| {
+                                    ui.selectable_value(
+                                        &mut self.operation_fields.direction,
+                                        operation::FinanseDirection::Debet,
+                                        "Debet",
+                                    );
+                                    ui.selectable_value(
+                                        &mut self.operation_fields.direction,
+                                        operation::FinanseDirection::Credit,
+                                        "Credit",
+                                    );
+                                });
+                            if ui.button("Receipt").clicked() {
+                                self.receipt_fields = ReceiptFields::new();
+                                let iter = self
+                                    .db
+                                    .operations
+                                    .iter_mut()
+                                    .find(|operation| operation.id == op_id);
+                                if let None = iter {
+                                    self.statement =
+                                        Statement::EditReceipt(Uuid::new_v4(), op_id, true)
+                                } else {
+                                    if let Some(identificator) = self.operation_fields.receipt {
+                                        self.statement =
+                                            Statement::EditReceipt(identificator, op_id, false);
+                                    } else {
+                                        self.statement =
+                                            Statement::EditReceipt(Uuid::new_v4(), op_id, false)
+                                    }
+                                }
+                            }
+                            // self.operation_fields.date = iter.date_time.date();
+                            // self.operation_fields.time = iter.date_time.time();
+                            // self.operation_fields.hour = self.operation_fields.time.hour();
+                            // self.operation_fields.minute = self.operation_fields.time.minute();
+                            // self.operation_fields.account_id = iter.account_id;
+                            // self.operation_fields.operation_type = iter.operation_type.clone();
+                            // self.operation_fields.summary = iter.summary.to_string();
+                            // self.operation_fields.direction = iter.direction.clone();
 
-                                ui.label("Account");
-                                egui::ComboBox::from_label("Select account!")
-                                    .selected_text(format!(
-                                        "{:?}",
-                                        self.operation_fields.account_id
-                                    ))
-                                    .show_ui(ui, |ui| {
-                                        for element in self.db.accounts.iter() {
-                                            ui.selectable_value(
-                                                &mut self.operation_fields.account_id,
-                                                element.id,
-                                                format!("{}", element.name),
-                                            );
-                                        }
-                                    });
-                                ui.label("Operation type");
-                                egui::ComboBox::from_label("Select type!")
-                                    .selected_text(format!(
-                                        "{:?}",
-                                        self.operation_fields.operation_type
-                                    ))
-                                    .show_ui(ui, |ui| {
-                                        ui.selectable_value(
-                                            &mut self.operation_fields.operation_type,
-                                            operation::OperationType::Initial,
-                                            "Initial",
-                                        );
-                                        ui.selectable_value(
-                                            &mut self.operation_fields.operation_type,
-                                            operation::OperationType::Buy,
-                                            "Buy",
-                                        );
-                                        ui.selectable_value(
-                                            &mut self.operation_fields.operation_type,
-                                            operation::OperationType::Sell,
-                                            "Sell",
-                                        );
-                                        ui.selectable_value(
-                                            &mut self.operation_fields.operation_type,
-                                            operation::OperationType::DebetingAccounts,
-                                            "Debeting Accounts",
-                                        );
-                                        ui.selectable_value(
-                                            &mut self.operation_fields.operation_type,
-                                            operation::OperationType::WithdrawalFromAccounts,
-                                            "Withdrawal From Account",
-                                        );
-                                        ui.selectable_value(
-                                            &mut self.operation_fields.operation_type,
-                                            operation::OperationType::ClosingAccounts,
-                                            "Closing Account",
-                                        );
-                                    });
-                                ui.label("Summ");
-                                ui.add(egui::TextEdit::singleline(
-                                    &mut self.operation_fields.summary,
-                                ));
-
-                                ui.label("Direction");
-                                egui::ComboBox::from_label("Select direction!")
-                                    .selected_text(format!("{:?}", self.operation_fields.direction))
-                                    .show_ui(ui, |ui| {
-                                        ui.selectable_value(
-                                            &mut self.operation_fields.direction,
-                                            operation::FinanseDirection::Debet,
-                                            "Debet",
-                                        );
-                                        ui.selectable_value(
-                                            &mut self.operation_fields.direction,
-                                            operation::FinanseDirection::Credit,
-                                            "Credit",
-                                        );
-                                    });
-                                // self.operation_fields.date = iter.date_time.date();
-                                // self.operation_fields.time = iter.date_time.time();
-                                // self.operation_fields.hour = self.operation_fields.time.hour();
-                                // self.operation_fields.minute = self.operation_fields.time.minute();
-                                // self.operation_fields.account_id = iter.account_id;
-                                // self.operation_fields.operation_type = iter.operation_type.clone();
-                                // self.operation_fields.summary = iter.summary.to_string();
-                                // self.operation_fields.direction = iter.direction.clone();
-
-                                if ui.button("Apply").clicked() {
-                                    let iter = self
-                                        .db
-                                        .operations
-                                        .iter_mut()
-                                        .find(|operation| operation.id == op_id);
-                                    let time = chrono::NaiveTime::from_hms_opt(
-                                        self.operation_fields.hour,
-                                        self.operation_fields.minute,
-                                        0,
-                                    )
-                                    .unwrap();
-                                    if let Some(element) = iter {
-                                        element.date_time = chrono::NaiveDateTime::new(
+                            if ui.button("Apply").clicked() {
+                                let iter = self
+                                    .db
+                                    .operations
+                                    .iter_mut()
+                                    .find(|operation| operation.id == op_id);
+                                let time = chrono::NaiveTime::from_hms_opt(
+                                    self.operation_fields.hour,
+                                    self.operation_fields.minute,
+                                    0,
+                                )
+                                .unwrap();
+                                if let Some(element) = iter {
+                                    element.date_time = chrono::NaiveDateTime::new(
+                                        self.operation_fields.date,
+                                        time,
+                                    );
+                                    element.account_id = self.operation_fields.account_id;
+                                    element.operation_type =
+                                        self.operation_fields.operation_type.clone();
+                                    element.summary =
+                                        self.operation_fields.summary.parse::<usize>().unwrap();
+                                    element.direction = self.operation_fields.direction.clone();
+                                } else {
+                                    self.db.operations.push(Operation {
+                                        id: op_id,
+                                        date_time: chrono::NaiveDateTime::new(
                                             self.operation_fields.date,
                                             time,
-                                        );
-                                        element.account_id = self.operation_fields.account_id;
-                                        element.operation_type =
-                                            self.operation_fields.operation_type.clone();
-                                        element.summary =
-                                            self.operation_fields.summary.parse::<usize>().unwrap();
-                                        element.direction = self.operation_fields.direction.clone();
-                                    } else {
-                                        self.db.operations.push(Operation {
-                                            id: op_id,
-                                            date_time: chrono::NaiveDateTime::new(
-                                                self.operation_fields.date,
-                                                time,
-                                            ),
-                                            account_id: self.operation_fields.account_id,
-                                            operation_type: self
-                                                .operation_fields
-                                                .operation_type
-                                                .clone(),
-                                            direction: self.operation_fields.direction.clone(),
-                                            receipt_id: None,
-                                            summary: self
-                                                .operation_fields
-                                                .summary
-                                                .parse::<usize>()
-                                                .unwrap(),
-                                        });
-                                    }
-                                    close_request = true;
+                                        ),
+                                        account_id: self.operation_fields.account_id,
+                                        operation_type: self
+                                            .operation_fields
+                                            .operation_type
+                                            .clone(),
+                                        direction: self.operation_fields.direction.clone(),
+                                        receipt_id: None,
+                                        summary: self
+                                            .operation_fields
+                                            .summary
+                                            .parse::<usize>()
+                                            .unwrap(),
+                                    });
                                 }
-                            });
-
-                            if ctx.input(|i| i.viewport().close_requested()) || close_request {
-                                // Tell parent viewport that we should not show next frame:
-                                // self.show_immediate_viewport = false;
-                                self.operation_fields = OperationFields::new();
-                                self.statement = Statement::Common;
+                                close_request = true;
                             }
-                        },
-                    );
-                } else {
-                    todo!()
-                }
+                        });
+
+                        if ctx.input(|i| i.viewport().close_requested()) || close_request {
+                            // Tell parent viewport that we should not show next frame:
+                            // self.show_immediate_viewport = false;
+                            self.operation_fields = OperationFields::new();
+                            self.statement = Statement::Common;
+                        }
+                    },
+                );
             }
 
             Statement::EditReceipt(uuid, op_uuid, signal) => {
@@ -755,7 +777,54 @@ impl eframe::App for App {
                         let mut close_request: bool = false;
 
                         egui::CentralPanel::default().show(ctx, |ui| {
-                            ui.label("Name");
+                            ui.label("Date and time");
+                            ui.add(egui_extras::DatePickerButton::new(
+                                &mut self.receipt_fields.date,
+                            ));
+                            ui.add(
+                                egui::DragValue::new(&mut self.receipt_fields.hour)
+                                    .speed(1)
+                                    .range(0..=23),
+                            );
+                            ui.add(
+                                egui::DragValue::new(&mut self.receipt_fields.minute)
+                                    .speed(1)
+                                    .range(0..=59),
+                            );
+                            ui.label("Receipt type");
+                            egui::ComboBox::from_label("Select calculation type!")
+                                .selected_text(format!(
+                                    "{:?}",
+                                    self.receipt_fields.calculation_type
+                                ))
+                                .show_ui(ui, |ui| {
+                                    ui.selectable_value(
+                                        &mut self.receipt_fields.calculation_type,
+                                        receipt::CalculationType::Inbound,
+                                        "Inbound",
+                                    );
+                                    ui.selectable_value(
+                                        &mut self.receipt_fields.calculation_type,
+                                        receipt::CalculationType::InboundReturn,
+                                        "Inbound Return",
+                                    );
+                                    ui.selectable_value(
+                                        &mut self.receipt_fields.calculation_type,
+                                        receipt::CalculationType::Outbound,
+                                        "Outbound",
+                                    );
+                                    ui.selectable_value(
+                                        &mut self.receipt_fields.calculation_type,
+                                        receipt::CalculationType::OutboundReturn,
+                                        "Outbound Return",
+                                    );
+                                });
+
+                            ui.label("Adress");
+                            ui.add(egui::TextEdit::singleline(&mut self.receipt_fields.address));
+                            ui.label("Point name");
+                            ui.add(egui::TextEdit::singleline(&mut self.receipt_fields.place));
+
                             StripBuilder::new(ui)
                                 .size(Size::exact(200.0))
                                 .vertical(|mut strip| {
@@ -958,27 +1027,286 @@ impl eframe::App for App {
                                     });
                                 });
 
+                            //
+                            ui.label("summary");
+                            ui.add(egui::TextEdit::singleline(&mut self.receipt_fields.summary));
+                            ui.label("cash");
+                            ui.add(egui::TextEdit::singleline(&mut self.receipt_fields.cash));
+                            ui.label("cashless");
+                            ui.add(egui::TextEdit::singleline(
+                                &mut self.receipt_fields.cashless,
+                            ));
+                            ui.label("prepayment");
+                            ui.add(egui::TextEdit::singleline(
+                                &mut self.receipt_fields.prepayment,
+                            ));
+                            ui.label("postpayment");
+                            ui.add(egui::TextEdit::singleline(
+                                &mut self.receipt_fields.postpayment,
+                            ));
+                            ui.label("in_kind");
+                            ui.add(egui::TextEdit::singleline(&mut self.receipt_fields.in_kind));
+                            ui.label("vat");
+                            ui.add(egui::TextEdit::singleline(&mut self.receipt_fields.vat));
+                            ui.label("url");
+                            ui.add(egui::TextEdit::singleline(&mut self.receipt_fields.url));
+
                             if ui.button("Apply").clicked() {
                                 let iter = self
                                     .db
                                     .receipts
                                     .iter_mut()
                                     .find(|receipt| receipt.id == rec_id);
-                                // if let Some(element) = iter {
-                                //     element.account_type = self.account_fields.account_type.clone();
-                                //     element.name = self.account_fields.name.clone();
-                                //     element.number = self.account_fields.number.clone();
-                                //     element.bik = self.account_fields.bik.parse::<u32>().unwrap();
-                                // } else {
-                                //     self.db.accounts.push(Account {
-                                //         id: acc_id,
-                                //         name: self.account_fields.name.clone(),
-                                //         account_type: self.account_fields.account_type.clone(),
-                                //         number: self.account_fields.number.clone(),
-                                //         bik: self.account_fields.bik.parse::<u32>().unwrap(),
-                                //         sum: 0,
-                                //     });
-                                // }
+                                let time = chrono::NaiveTime::from_hms_opt(
+                                    self.operation_fields.hour,
+                                    self.operation_fields.minute,
+                                    0,
+                                )
+                                .unwrap();
+                                if let Some(element) = iter {
+                                    element.date_time = chrono::NaiveDateTime::new(
+                                        self.operation_fields.date,
+                                        time,
+                                    );
+                                    element.calculation_type = self.receipt_fields.calculation_type;
+                                    if self.receipt_fields.address == "".to_string() {
+                                        element.address = None;
+                                    } else {
+                                        element.address = Some(self.receipt_fields.address.clone());
+                                    }
+                                    if self.receipt_fields.place == "".to_string() {
+                                        element.place = None;
+                                    } else {
+                                        element.place = Some(self.receipt_fields.place.clone());
+                                    }
+                                    element.subjects = Vec::new();
+                                    for j in 0..self.receipt_fields.subjects.len() {
+                                        element
+                                            .subjects
+                                            .push(self.receipt_fields.subjects[j].clone());
+                                    }
+                                    element.summary = Decimal::from_str_exact(
+                                        &self.receipt_fields.summary.clone(),
+                                    )
+                                    .unwrap();
+                                    if self.receipt_fields.cash == ""
+                                        || self.receipt_fields.cash == "0"
+                                    {
+                                        element.cash = None;
+                                    } else {
+                                        element.cash = Some(
+                                            Decimal::from_str_exact(
+                                                &self.receipt_fields.cash.clone(),
+                                            )
+                                            .unwrap(),
+                                        );
+                                    }
+                                    if self.receipt_fields.cashless == ""
+                                        || self.receipt_fields.cashless == "0"
+                                    {
+                                        element.cashless = None;
+                                    } else {
+                                        element.cashless = Some(
+                                            Decimal::from_str_exact(
+                                                &self.receipt_fields.cashless.clone(),
+                                            )
+                                            .unwrap(),
+                                        );
+                                    }
+                                    if self.receipt_fields.prepayment == ""
+                                        || self.receipt_fields.prepayment == "0"
+                                    {
+                                        element.prepayment = None;
+                                    } else {
+                                        element.prepayment = Some(
+                                            Decimal::from_str_exact(
+                                                &self.receipt_fields.prepayment.clone(),
+                                            )
+                                            .unwrap(),
+                                        );
+                                    }
+                                    if self.receipt_fields.postpayment == ""
+                                        || self.receipt_fields.postpayment == "0"
+                                    {
+                                        element.postpayment = None;
+                                    } else {
+                                        element.postpayment = Some(
+                                            Decimal::from_str_exact(
+                                                &self.receipt_fields.postpayment.clone(),
+                                            )
+                                            .unwrap(),
+                                        );
+                                    }
+                                    if self.receipt_fields.in_kind == ""
+                                        || self.receipt_fields.in_kind == "0"
+                                    {
+                                        element.in_kind = None;
+                                    } else {
+                                        element.in_kind = Some(
+                                            Decimal::from_str_exact(
+                                                &self.receipt_fields.in_kind.clone(),
+                                            )
+                                            .unwrap(),
+                                        );
+                                    }
+                                    if self.receipt_fields.vat == ""
+                                        || self.receipt_fields.vat == "0"
+                                    {
+                                        element.vat = None;
+                                    } else {
+                                        element.vat = Some(
+                                            Decimal::from_str_exact(
+                                                &self.receipt_fields.vat.clone(),
+                                            )
+                                            .unwrap(),
+                                        );
+                                    }
+                                    if self.receipt_fields.url == "".to_string() {
+                                        element.url = None;
+                                    } else {
+                                        element.url = Some(self.receipt_fields.url.clone());
+                                    }
+                                } else {
+                                    let mut element = Receipt::empty_new();
+                                    element.id = rec_id;
+                                    element.date_time = chrono::NaiveDateTime::new(
+                                        self.operation_fields.date,
+                                        time,
+                                    );
+                                    element.calculation_type = self.receipt_fields.calculation_type;
+                                    if self.receipt_fields.address == "".to_string() {
+                                        element.address = None;
+                                    } else {
+                                        element.address = Some(self.receipt_fields.address.clone());
+                                    }
+                                    if self.receipt_fields.place == "".to_string() {
+                                        element.place = None;
+                                    } else {
+                                        element.place = Some(self.receipt_fields.place.clone());
+                                    }
+                                    element.subjects = Vec::new();
+                                    for j in 0..self.receipt_fields.subjects.len() {
+                                        element
+                                            .subjects
+                                            .push(self.receipt_fields.subjects[j].clone());
+                                    }
+                                    element.summary = Decimal::from_str_exact(
+                                        &self.receipt_fields.summary.clone(),
+                                    )
+                                    .unwrap();
+                                    if self.receipt_fields.cash == ""
+                                        || self.receipt_fields.cash == "0"
+                                    {
+                                        element.cash = None;
+                                    } else {
+                                        element.cash = Some(
+                                            Decimal::from_str_exact(
+                                                &self.receipt_fields.cash.clone(),
+                                            )
+                                            .unwrap(),
+                                        );
+                                    }
+                                    if self.receipt_fields.cashless == ""
+                                        || self.receipt_fields.cashless == "0"
+                                    {
+                                        element.cashless = None;
+                                    } else {
+                                        element.cashless = Some(
+                                            Decimal::from_str_exact(
+                                                &self.receipt_fields.cashless.clone(),
+                                            )
+                                            .unwrap(),
+                                        );
+                                    }
+                                    if self.receipt_fields.prepayment == ""
+                                        || self.receipt_fields.prepayment == "0"
+                                    {
+                                        element.prepayment = None;
+                                    } else {
+                                        element.prepayment = Some(
+                                            Decimal::from_str_exact(
+                                                &self.receipt_fields.prepayment.clone(),
+                                            )
+                                            .unwrap(),
+                                        );
+                                    }
+                                    if self.receipt_fields.postpayment == ""
+                                        || self.receipt_fields.postpayment == "0"
+                                    {
+                                        element.postpayment = None;
+                                    } else {
+                                        element.postpayment = Some(
+                                            Decimal::from_str_exact(
+                                                &self.receipt_fields.postpayment.clone(),
+                                            )
+                                            .unwrap(),
+                                        );
+                                    }
+                                    if self.receipt_fields.in_kind == ""
+                                        || self.receipt_fields.in_kind == "0"
+                                    {
+                                        element.in_kind = None;
+                                    } else {
+                                        element.in_kind = Some(
+                                            Decimal::from_str_exact(
+                                                &self.receipt_fields.in_kind.clone(),
+                                            )
+                                            .unwrap(),
+                                        );
+                                    }
+                                    if self.receipt_fields.vat == ""
+                                        || self.receipt_fields.vat == "0"
+                                    {
+                                        element.vat = None;
+                                    } else {
+                                        element.vat = Some(
+                                            Decimal::from_str_exact(
+                                                &self.receipt_fields.vat.clone(),
+                                            )
+                                            .unwrap(),
+                                        );
+                                    }
+                                    if self.receipt_fields.url == "".to_string() {
+                                        element.url = None;
+                                    } else {
+                                        element.url = Some(self.receipt_fields.url.clone());
+                                    }
+                                    self.db.receipts.push(element);
+                                }
+                                if signal {
+                                    self.operation_fields.date = self.receipt_fields.date;
+                                    self.operation_fields.hour = self.receipt_fields.hour;
+                                    self.operation_fields.minute = self.receipt_fields.minute;
+                                    match self.receipt_fields.calculation_type {
+                                        receipt::CalculationType::Inbound => {
+                                            self.operation_fields.direction =
+                                                operation::FinanseDirection::Credit;
+                                            self.operation_fields.operation_type =
+                                                OperationType::Buy;
+                                        }
+                                        receipt::CalculationType::Outbound => {
+                                            self.operation_fields.direction =
+                                                operation::FinanseDirection::Debet;
+                                            self.operation_fields.operation_type =
+                                                OperationType::Sell;
+                                        }
+                                        receipt::CalculationType::InboundReturn => {
+                                            self.operation_fields.direction =
+                                                operation::FinanseDirection::Debet;
+                                            self.operation_fields.operation_type =
+                                                OperationType::ReturnBuy;
+                                        }
+                                        receipt::CalculationType::OutboundReturn => {
+                                            self.operation_fields.direction =
+                                                operation::FinanseDirection::Credit;
+                                            self.operation_fields.operation_type =
+                                                OperationType::ReturnSell;
+                                        }
+                                    }
+                                    self.operation_fields.summary =
+                                        self.receipt_fields.summary.clone();
+                                    self.operation_fields.receipt = Some(rec_id);
+                                }
                                 close_request = true;
                             }
                         });
@@ -986,9 +1314,8 @@ impl eframe::App for App {
                         if ctx.input(|i| i.viewport().close_requested()) || close_request {
                             // Tell parent viewport that we should not show next frame:
                             // self.show_immediate_viewport = false;
-                            //
-                            self.account_fields = AccountFields::new();
-                            self.statement = Statement::EditOperation(op_id, signal);
+                            self.receipt_fields = ReceiptFields::new();
+                            self.statement = Statement::EditOperation(op_id);
                         }
                     },
                 );

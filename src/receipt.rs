@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 //Признак рассчёта - тип чека
-#[derive(Default, Serialize, Deserialize, Debug)]
+#[derive(Default, Serialize, Deserialize, Debug, PartialEq, Clone, Copy)]
 pub enum CalculationType {
     #[default]
     Inbound, // Чек прихода
@@ -13,7 +13,7 @@ pub enum CalculationType {
     OutboundReturn, // Возврат расхода
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub enum VatType {
     Vat20,
     Vat10,
@@ -22,7 +22,7 @@ pub enum VatType {
     Vat0,
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub enum UnitType {
     Pieces,
     Gramm,
@@ -51,21 +51,21 @@ pub enum UnitType {
     // Терабайт
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub enum CashlessOpType {
     Payment,
     Cansel,
     Return,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub enum Currency {
     Rub,
     Usd,
 }
 // Предмет рассчёта
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Subject {
     pub name: String,        // Найменование
     pub unit_type: UnitType, // Тип количества
@@ -126,11 +126,10 @@ pub struct Receipt {
     pub slip: Option<Slip>,
 }
 
-// impl Receipt {
-//     pub fn short_new(summary: Decimal) -> Self {
-//         Self {
-//             summary,
-//             ..Default::default()
-//         }
-//     }
-// }
+impl Receipt {
+    pub fn empty_new() -> Self {
+        Self {
+            ..Default::default()
+        }
+    }
+}

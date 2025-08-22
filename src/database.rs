@@ -17,6 +17,8 @@ pub struct Database {
     pub receipts: Vec<Receipt>,
 }
 
+// /home/user/rust_projects/file.json
+
 impl Database {
     pub fn load(filename: String) -> Self {
         let file = File::open(filename).unwrap();

@@ -7,6 +7,8 @@ pub enum OperationType {
     Initial,
     Buy,
     Sell,
+    ReturnBuy,
+    ReturnSell,
     DebetingAccounts,       //Зачисление на счёт
     WithdrawalFromAccounts, // Списание со счёта
     ClosingAccounts,        // Закрытие счёта
