@@ -169,7 +169,7 @@ impl App {
         } else {
             Self {
                 db: Database::new(),
-                file: "".to_string(),
+                file: "file.json".to_string(),
                 selected: None,
                 statement: Statement::Common,
                 account_fields: AccountFields::new(),
@@ -447,7 +447,7 @@ impl eframe::App for App {
                     self.statement = Statement::EditOperation(Uuid::new_v4());
                 }
                 if ui.button("Save").clicked() {
-                    self.db.save("/home/user/rust_projects/file.json");
+                    self.db.save(&self.file);
                 }
             });
 
