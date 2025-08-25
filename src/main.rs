@@ -1,22 +1,10 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
 #![allow(rustdoc::missing_crate_level_docs)] // it's an example
 
-use std::{env, ops::Deref};
+use eframe::egui::{self};
+use std::env;
 
-use chrono::{Date, DateTime, Local, NaiveDate, NaiveDateTime, NaiveTime, Timelike, Utc};
-use egui_extras::{Column, Size, StripBuilder, TableBuilder};
-use rust_decimal::{self, Decimal, dec};
-use uuid::Uuid;
-
-use crate::{
-    account::Account,
-    app::App,
-    database::Database,
-    operation::{FinanseDirection, Operation, OperationType},
-    receipt::{Receipt, VatType},
-};
-
-use eframe::egui::{self, Response, Ui};
+use crate::app::App;
 
 mod account;
 mod app;
@@ -43,6 +31,3 @@ fn main() -> eframe::Result {
         }),
     )
 }
-
-// let window = eframe::egui::Window::new("New Account");
-// let window2 = window.show(ctx, |ui| ui.label("text"));

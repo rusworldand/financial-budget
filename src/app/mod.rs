@@ -1,8 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
 #![allow(rustdoc::missing_crate_level_docs)] // it's an example
 
-use std::{env, ops::Deref};
-
 use chrono::{Date, DateTime, Local, NaiveDate, NaiveDateTime, NaiveTime, Timelike, Utc};
 use egui_extras::{Column, Size, StripBuilder, TableBuilder};
 use rust_decimal::{self, Decimal, dec};
@@ -1306,3 +1304,6 @@ impl eframe::App for App {
         }
     }
 }
+
+// let window = eframe::egui::Window::new("New Account");
+// let window2 = window.show(ctx, |ui| ui.label("text"));
