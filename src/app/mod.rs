@@ -2,27 +2,28 @@
 #![allow(rustdoc::missing_crate_level_docs)] // it's an example
 
 use chrono::{Date, DateTime, Local, NaiveDate, NaiveDateTime, NaiveTime, Timelike, Utc};
-use egui_extras::{Column, Size, StripBuilder, TableBuilder};
+
 use rust_decimal::{self, Decimal, dec};
 use uuid::Uuid;
 
 use crate::{
     account::{self, *},
+    app::{cbox::*, table::TableType},
     database::*,
     operation::{self, *},
     receipt::{self, *},
 };
 
 use eframe::egui::{self, Response, Ui};
+use egui_extras::{Column, Size, StripBuilder, TableBuilder};
+
+mod cbox;
+mod compare;
+mod table;
 
 enum Selection {
     Account(Uuid),
     Operation(Uuid),
-}
-
-enum TableType {
-    Account,
-    Operation,
 }
 
 enum Statement {
@@ -151,174 +152,6 @@ impl App {
             }
         }
     }
-    fn response_compare(variable: Response, temp_response: &mut Option<Response>) {
-        if let Some(response) = temp_response {
-            *response = response.union(variable);
-        } else {
-            *temp_response = Some(variable);
-        }
-    }
-    fn table(&mut self, table_type: TableType, ui: &mut Ui) -> Response {
-        match table_type {
-            TableType::Account => Some(ui.label(format!("Accounts"))),
-            TableType::Operation => Some(ui.label(format!("Operations"))),
-        };
-
-        StripBuilder::new(ui)
-            .size(Size::exact(200.0)) // for the table
-            .vertical(|mut strip| {
-                strip.cell(|ui| {
-                    let mut table = TableBuilder::new(ui).resizable(true).striped(true);
-                    match table_type {
-                        TableType::Account => table = table.id_salt("accounts_table"),
-                        TableType::Operation => table = table.id_salt("operations_table"),
-                    }
-                    table = table.cell_layout(egui::Layout::left_to_right(egui::Align::Center));
-                    match table_type {
-                        TableType::Account => {
-                            table = table.column(Column::auto()).column(Column::auto());
-                        }
-                        TableType::Operation => {
-                            table = table
-                                .column(Column::auto())
-                                .column(Column::auto())
-                                .column(Column::auto());
-                        }
-                    }
-                    table = table
-                        .min_scrolled_height(0.0)
-                        .max_scroll_height(500.0)
-                        .sense(egui::Sense::click());
-
-                    table
-                        .header(30.0, |mut header| {
-                            match table_type {
-                                TableType::Account => {
-                                    header.col(|ui| {
-                                        ui.strong("ID");
-                                        // ui.push_id(id_salt, add_contents)
-                                    });
-                                    header.col(|ui| {
-                                        ui.strong("Name");
-                                    });
-                                }
-                                TableType::Operation => {
-                                    header.col(|ui| {
-                                        ui.strong("Account");
-                                    });
-                                    header.col(|ui| {
-                                        ui.strong("Date / Time");
-                                    });
-                                    header.col(|ui| {
-                                        ui.strong("Sum");
-                                    });
-                                }
-                            }
-                        })
-                        .body(|mut body| {
-                            //let mut temp_response: Option<Response> = None;
-                            let contents =
-                                |ui: &mut eframe::egui::Ui,
-                                 text: String,
-                                 response: &mut Option<Response>| {
-                                    App::response_compare(ui.label(text), response);
-                                };
-                            match table_type {
-                                TableType::Account => {
-                                    for i in &self.db.accounts {
-                                        body.row(30.0, |mut row| {
-                                            let mut inner_response: Option<Response> = None;
-                                            row.col(|ui| {
-                                                contents(
-                                                    ui,
-                                                    format!("ID '{}'", i.id),
-                                                    &mut inner_response,
-                                                )
-                                            });
-
-                                            row.col(|ui| {
-                                                contents(
-                                                    ui,
-                                                    format!("Name '{}'", i.name),
-                                                    &mut inner_response,
-                                                )
-                                            });
-
-                                            let row_response = row.response();
-
-                                            App::response_compare(
-                                                row_response,
-                                                &mut inner_response,
-                                            );
-
-                                            if let Some(response) = inner_response {
-                                                if response.double_clicked() {
-                                                    println!("Double!");
-                                                    println!("{}", i.id);
-                                                    self.selected = Some(Selection::Account(i.id))
-                                                }
-                                                if response.triple_clicked() {
-                                                    println!("Triple!");
-                                                    println!("{}", i.id);
-                                                    self.selected = Some(Selection::Account(i.id))
-                                                }
-                                            }
-                                        });
-                                    }
-                                }
-                                TableType::Operation => {
-                                    for i in &self.db.operations {
-                                        body.row(30.0, |mut row| {
-                                            let mut inner_response: Option<Response> = None;
-                                            row.col(|ui| {
-                                                contents(
-                                                    ui,
-                                                    format!("ID '{}'", i.account_id),
-                                                    &mut inner_response,
-                                                )
-                                            });
-
-                                            row.col(|ui| {
-                                                contents(
-                                                    ui,
-                                                    format!("Name '{}'", i.date_time),
-                                                    &mut inner_response,
-                                                )
-                                            });
-
-                                            row.col(|ui| {
-                                                contents(
-                                                    ui,
-                                                    format!("Name '{}'", i.summary),
-                                                    &mut inner_response,
-                                                )
-                                            });
-                                            let row_response = row.response();
-
-                                            App::response_compare(
-                                                row_response,
-                                                &mut inner_response,
-                                            );
-                                            if let Some(response) = inner_response {
-                                                if response.double_clicked() {
-                                                    println!("Double!");
-                                                    println!("{}", i.id);
-                                                    self.selected = Some(Selection::Operation(i.id))
-                                                }
-                                                if response.triple_clicked() {
-                                                    println!("Triple!");
-                                                    println!("{}", i.id);
-                                                    self.selected = Some(Selection::Operation(i.id))
-                                                }
-                                            };
-                                        });
-                                    }
-                                }
-                            }
-                        });
-                });
-            })
-    }
 }
 
 impl eframe::App for App {
@@ -326,9 +159,9 @@ impl eframe::App for App {
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.heading("My egui Application");
             //ui.push_id(id_salt, add_contents)
-            self.table(TableType::Account, ui);
+            table::table(self, TableType::Account, ui);
             ui.separator();
-            self.table(TableType::Operation, ui);
+            table::table(self, TableType::Operation, ui);
         });
         egui::SidePanel::right("right_panel")
             .resizable(true)
@@ -448,6 +281,7 @@ impl eframe::App for App {
                             //let mut response: Response;
                             //response =
                             ui.add(egui::TextEdit::singleline(&mut self.account_fields.name));
+                            // cbox(ui, &mut self.account_fields.account_type, "Select one!");
                             egui::ComboBox::from_label("Select one!")
                                 .selected_text(format!("{:?}", self.account_fields.account_type))
                                 .show_ui(ui, |ui| {
