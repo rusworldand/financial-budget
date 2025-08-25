@@ -1027,6 +1027,10 @@ impl eframe::App for App {
                                     });
                                 });
 
+                            if ui.button("Add row").clicked() {
+                                &mut self.receipt_fields.subjects.push(receipt::Subject::empty());
+                            }
+
                             //
                             ui.label("summary");
                             ui.add(egui::TextEdit::singleline(&mut self.receipt_fields.summary));

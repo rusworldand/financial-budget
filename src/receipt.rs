@@ -76,6 +76,20 @@ pub struct Subject {
     pub vat: Decimal,        // НДС
 }
 
+impl Subject {
+    pub fn empty() -> Self {
+        Self {
+            name: "".to_string(),
+            unit_type: UnitType::Pieces,
+            count: 0,
+            price: Decimal::new(0, 2),
+            summary: Decimal::new(0, 2),
+            vat_type: VatType::Vat0,
+            vat: Decimal::new(0, 2),
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Slip {
     pub id: usize,                      //Номер терминала
