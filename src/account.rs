@@ -1,7 +1,8 @@
 use serde::{Deserialize, Serialize};
+use strum::EnumIter;
 use uuid::Uuid;
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone, EnumIter)]
 pub enum AccountType {
     Account,
     Cash,

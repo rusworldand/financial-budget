@@ -1,8 +1,9 @@
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
+use strum::EnumIter;
 use uuid::Uuid;
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone, EnumIter)]
 pub enum OperationType {
     Initial,
     Buy,
@@ -14,7 +15,7 @@ pub enum OperationType {
     ClosingAccounts,        // Закрытие счёта
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone, EnumIter)]
 pub enum FinanseDirection {
     Debet,  //+
     Credit, //-

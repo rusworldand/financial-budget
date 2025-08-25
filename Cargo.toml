@@ -22,3 +22,4 @@ eframe = { git = "ssh://git@github.com/zezic/egui.git", rev = "f34a9498d19b53a6a
 egui_extras = { git = "ssh://git@github.com/zezic/egui.git", rev = "f34a9498d19b53a6a79e8bf72d7e2da19c8c5af1", features = [
     "datepicker",
 ] }
+strum = { version = "0.27.2", features = ["derive"] }

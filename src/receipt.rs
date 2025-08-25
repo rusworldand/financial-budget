@@ -1,10 +1,11 @@
 use chrono::NaiveDateTime;
 use rust_decimal::{self, Decimal};
 use serde::{Deserialize, Serialize};
+use strum::EnumIter;
 use uuid::Uuid;
 
 //Признак рассчёта - тип чека
-#[derive(Default, Serialize, Deserialize, Debug, PartialEq, Clone, Copy)]
+#[derive(Default, Serialize, Deserialize, Debug, PartialEq, Clone, Copy, EnumIter)]
 pub enum CalculationType {
     #[default]
     Inbound, // Чек прихода
@@ -13,7 +14,7 @@ pub enum CalculationType {
     OutboundReturn, // Возврат расхода
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone, EnumIter)]
 pub enum VatType {
     Vat20,
     Vat10,
@@ -22,7 +23,7 @@ pub enum VatType {
     Vat0,
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone, EnumIter)]
 pub enum UnitType {
     Pieces,
     Gramm,
@@ -51,14 +52,14 @@ pub enum UnitType {
     // Терабайт
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, EnumIter)]
 pub enum CashlessOpType {
     Payment,
     Cansel,
     Return,
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, EnumIter)]
 pub enum Currency {
     Rub,
     Usd,

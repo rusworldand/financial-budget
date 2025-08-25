@@ -1,20 +1,22 @@
-use eframe::egui::{self, Response, Ui};
-use std::*;
+use eframe::egui::{self, Ui};
+use std::fmt::Debug;
+use strum::IntoEnumIterator;
 
-//trait Enum: Debug {}
+// trait Enum: Debug {}
 
-// pub fn cbox(ui: &mut Ui, variable: &mut T, label: &str)
-// where
-//     T: Enum,
-// {
-//     egui::ComboBox::from_label(label)
-//         .selected_text(format!("{:?}", variable))
-//         .show_ui(ui, |ui| {
-//             for i in T {
-//                 ui.selectable_value(&mut variable, i, format!("{:?}", i));
-//             }
-//         });
-// }
+pub fn cbox<T>(ui: &mut Ui, variable: &mut T, label: &str)
+where
+    T: IntoEnumIterator + Debug + PartialEq,
+{
+    egui::ComboBox::from_label(label)
+        .selected_text(format!("{:?}", variable))
+        .show_ui(ui, |ui| {
+            for i in T::iter() {
+                let text = format!("{:?}", i);
+                ui.selectable_value(variable, i, text);
+            }
+        });
+}
 
 // egui::ComboBox::from_label("Select one!")
 //     .selected_text(format!("{:?}", self.account_fields.account_type))

@@ -281,46 +281,7 @@ impl eframe::App for App {
                             //let mut response: Response;
                             //response =
                             ui.add(egui::TextEdit::singleline(&mut self.account_fields.name));
-                            // cbox(ui, &mut self.account_fields.account_type, "Select one!");
-                            egui::ComboBox::from_label("Select one!")
-                                .selected_text(format!("{:?}", self.account_fields.account_type))
-                                .show_ui(ui, |ui| {
-                                    ui.selectable_value(
-                                        &mut self.account_fields.account_type,
-                                        account::AccountType::Account,
-                                        "Common Account",
-                                    );
-                                    ui.selectable_value(
-                                        &mut self.account_fields.account_type,
-                                        account::AccountType::Cash,
-                                        "Cash",
-                                    );
-                                    ui.selectable_value(
-                                        &mut self.account_fields.account_type,
-                                        account::AccountType::DebetCard,
-                                        "DebetCard",
-                                    );
-                                    ui.selectable_value(
-                                        &mut self.account_fields.account_type,
-                                        account::AccountType::CreditCard,
-                                        "CreditCard",
-                                    );
-                                    ui.selectable_value(
-                                        &mut self.account_fields.account_type,
-                                        account::AccountType::CreditAccount,
-                                        "CreditAccount",
-                                    );
-                                    ui.selectable_value(
-                                        &mut self.account_fields.account_type,
-                                        account::AccountType::AccumulativeAccount,
-                                        "AccumulativeAccount",
-                                    );
-                                    ui.selectable_value(
-                                        &mut self.account_fields.account_type,
-                                        account::AccountType::Deposit,
-                                        "Deposit",
-                                    );
-                                });
+                            cbox(ui, &mut self.account_fields.account_type, "Select one!");
 
                             ui.add(
                                 egui::TextEdit::singleline(&mut self.account_fields.number)
@@ -412,73 +373,23 @@ impl eframe::App for App {
                                     }
                                 });
                             ui.label("Operation type");
-                            egui::ComboBox::from_label("Select type!")
-                                .selected_text(format!(
-                                    "{:?}",
-                                    self.operation_fields.operation_type
-                                ))
-                                .show_ui(ui, |ui| {
-                                    ui.selectable_value(
-                                        &mut self.operation_fields.operation_type,
-                                        operation::OperationType::Initial,
-                                        "Initial",
-                                    );
-                                    ui.selectable_value(
-                                        &mut self.operation_fields.operation_type,
-                                        operation::OperationType::Buy,
-                                        "Buy",
-                                    );
-                                    ui.selectable_value(
-                                        &mut self.operation_fields.operation_type,
-                                        operation::OperationType::Sell,
-                                        "Sell",
-                                    );
-                                    ui.selectable_value(
-                                        &mut self.operation_fields.operation_type,
-                                        operation::OperationType::ReturnBuy,
-                                        "Return Buy",
-                                    );
-                                    ui.selectable_value(
-                                        &mut self.operation_fields.operation_type,
-                                        operation::OperationType::ReturnSell,
-                                        "Return Sell",
-                                    );
-                                    ui.selectable_value(
-                                        &mut self.operation_fields.operation_type,
-                                        operation::OperationType::DebetingAccounts,
-                                        "Debeting Accounts",
-                                    );
-                                    ui.selectable_value(
-                                        &mut self.operation_fields.operation_type,
-                                        operation::OperationType::WithdrawalFromAccounts,
-                                        "Withdrawal From Account",
-                                    );
-                                    ui.selectable_value(
-                                        &mut self.operation_fields.operation_type,
-                                        operation::OperationType::ClosingAccounts,
-                                        "Closing Account",
-                                    );
-                                });
+                            cbox(
+                                ui,
+                                &mut self.operation_fields.operation_type,
+                                "Select type!",
+                            );
                             ui.label("Summ");
                             ui.add(egui::TextEdit::singleline(
                                 &mut self.operation_fields.summary,
                             ));
 
                             ui.label("Direction");
-                            egui::ComboBox::from_label("Select direction!")
-                                .selected_text(format!("{:?}", self.operation_fields.direction))
-                                .show_ui(ui, |ui| {
-                                    ui.selectable_value(
-                                        &mut self.operation_fields.direction,
-                                        operation::FinanseDirection::Debet,
-                                        "Debet",
-                                    );
-                                    ui.selectable_value(
-                                        &mut self.operation_fields.direction,
-                                        operation::FinanseDirection::Credit,
-                                        "Credit",
-                                    );
-                                });
+                            cbox(
+                                ui,
+                                &mut self.operation_fields.direction,
+                                "Select direction!",
+                            );
+
                             if ui.button("Receipt").clicked() {
                                 self.receipt_fields = ReceiptFields::new();
                                 let iter = self
@@ -499,14 +410,6 @@ impl eframe::App for App {
                                     }
                                 }
                             }
-                            // self.operation_fields.date = iter.date_time.date();
-                            // self.operation_fields.time = iter.date_time.time();
-                            // self.operation_fields.hour = self.operation_fields.time.hour();
-                            // self.operation_fields.minute = self.operation_fields.time.minute();
-                            // self.operation_fields.account_id = iter.account_id;
-                            // self.operation_fields.operation_type = iter.operation_type.clone();
-                            // self.operation_fields.summary = iter.summary.to_string();
-                            // self.operation_fields.direction = iter.direction.clone();
 
                             if ui.button("Apply").clicked() {
                                 let iter = self
@@ -599,33 +502,11 @@ impl eframe::App for App {
                                     .range(0..=59),
                             );
                             ui.label("Receipt type");
-                            egui::ComboBox::from_label("Select calculation type!")
-                                .selected_text(format!(
-                                    "{:?}",
-                                    self.receipt_fields.calculation_type
-                                ))
-                                .show_ui(ui, |ui| {
-                                    ui.selectable_value(
-                                        &mut self.receipt_fields.calculation_type,
-                                        receipt::CalculationType::Inbound,
-                                        "Inbound",
-                                    );
-                                    ui.selectable_value(
-                                        &mut self.receipt_fields.calculation_type,
-                                        receipt::CalculationType::InboundReturn,
-                                        "Inbound Return",
-                                    );
-                                    ui.selectable_value(
-                                        &mut self.receipt_fields.calculation_type,
-                                        receipt::CalculationType::Outbound,
-                                        "Outbound",
-                                    );
-                                    ui.selectable_value(
-                                        &mut self.receipt_fields.calculation_type,
-                                        receipt::CalculationType::OutboundReturn,
-                                        "Outbound Return",
-                                    );
-                                });
+                            cbox(
+                                ui,
+                                &mut self.receipt_fields.calculation_type,
+                                "Select calculation type!",
+                            );
 
                             ui.label("Adress");
                             ui.add(egui::TextEdit::singleline(&mut self.receipt_fields.address));
@@ -713,40 +594,13 @@ impl eframe::App for App {
                                                         });
 
                                                         row.col(|ui| {
-                                                            egui::ComboBox::from_label(
+                                                            cbox(
+                                                                ui,
+                                                                &mut self.receipt_fields.subjects
+                                                                    [i]
+                                                                    .unit_type,
                                                                 "Select unit type!",
-                                                            )
-                                                            .selected_text(format!(
-                                                                "{:?}",
-                                                                self.receipt_fields.subjects[i]
-                                                                    .unit_type
-                                                            ))
-                                                            .show_ui(ui, |ui| {
-                                                                ui.selectable_value(
-                                                                    &mut self
-                                                                        .receipt_fields
-                                                                        .subjects[i]
-                                                                        .unit_type,
-                                                                    receipt::UnitType::Pieces,
-                                                                    "Pieces",
-                                                                );
-                                                                ui.selectable_value(
-                                                                    &mut self
-                                                                        .receipt_fields
-                                                                        .subjects[i]
-                                                                        .unit_type,
-                                                                    receipt::UnitType::Gramm,
-                                                                    "Gramm",
-                                                                );
-                                                                ui.selectable_value(
-                                                                    &mut self
-                                                                        .receipt_fields
-                                                                        .subjects[i]
-                                                                        .unit_type,
-                                                                    receipt::UnitType::Kilogamm,
-                                                                    "Kilogamm",
-                                                                );
-                                                            });
+                                                            );
                                                         });
 
                                                         row.col(|ui| {
@@ -768,56 +622,13 @@ impl eframe::App for App {
                                                         });
 
                                                         row.col(|ui| {
-                                                            egui::ComboBox::from_label(
+                                                            cbox(
+                                                                ui,
+                                                                &mut self.receipt_fields.subjects
+                                                                    [i]
+                                                                    .vat_type,
                                                                 "Select Vat type!",
-                                                            )
-                                                            .selected_text(format!(
-                                                                "{:?}",
-                                                                self.receipt_fields.subjects[i]
-                                                                    .vat_type
-                                                            ))
-                                                            .show_ui(ui, |ui| {
-                                                                ui.selectable_value(
-                                                                    &mut self
-                                                                        .receipt_fields
-                                                                        .subjects[i]
-                                                                        .vat_type,
-                                                                    receipt::VatType::Vat0,
-                                                                    "Initial",
-                                                                );
-                                                                ui.selectable_value(
-                                                                    &mut self
-                                                                        .receipt_fields
-                                                                        .subjects[i]
-                                                                        .vat_type,
-                                                                    receipt::VatType::Vat5,
-                                                                    "Buy",
-                                                                );
-                                                                ui.selectable_value(
-                                                                    &mut self
-                                                                        .receipt_fields
-                                                                        .subjects[i]
-                                                                        .vat_type,
-                                                                    receipt::VatType::Vat7,
-                                                                    "Sell",
-                                                                );
-                                                                ui.selectable_value(
-                                                                    &mut self
-                                                                        .receipt_fields
-                                                                        .subjects[i]
-                                                                        .vat_type,
-                                                                    receipt::VatType::Vat10,
-                                                                    "Debeting Accounts",
-                                                                );
-                                                                ui.selectable_value(
-                                                                    &mut self
-                                                                        .receipt_fields
-                                                                        .subjects[i]
-                                                                        .vat_type,
-                                                                    receipt::VatType::Vat20,
-                                                                    "Withdrawal From Account",
-                                                                );
-                                                            });
+                                                            );
                                                         });
 
                                                         row.col(|ui| {
